@@ -322,7 +322,7 @@ Android 표적 재검증은 LG `LM-V500N`, Android 12(API 31), Expo Go `54.0.8`�
 
 | 단계 | 작업 | 상태 | 시작 조건 | 완료 기준 |
 |---|---|---|---|---|
-| 2 | Public GitHub 저장소 생성과 의미별 초기 commit/push | 진행 중 | 공개 전 민감 정보 감사, 사용자의 빈 저장소 생성 | 단계·기능·의미별 commit과 1차 push, GitHub 결과 문서 갱신 commit과 2차 push, local/remote 일치 확인 |
+| 2 | Public GitHub 저장소 생성과 의미별 초기 commit/push | 완료 | 공개 전 민감 정보 감사, 사용자의 빈 저장소 생성 | 단계·기능·의미별 commit과 1차 push, GitHub 결과 문서 갱신 commit과 2차 push, local/remote 일치 확인 |
 | 3 | Android development build와 외부 custom scheme 검증 | 대기 | 2단계 완료, 사용자의 명시적 시작, build 방식·서명 범위 확인 | 외부 OS에서 `mywebviewapp://webviewappdemo?...` 진입과 영향 범위 회귀 검증 완료 |
 | 4 | iOS 실기기 전체 흐름 검증 | 대기 | macOS/Xcode/iPhone 또는 동등한 iOS build·설치 환경 준비 | 참고 iOS 앱과의 기능 동등성, iOS 고유 탐색·권한·lifecycle 검증 완료 |
 | 5 | 최종 인계 문서·source 주석·학습서 정리 | 대기 | 3~4단계 결과 확정, 최종 source freeze 후보 준비 | 필수 문서와 주석 완성, 전체 검증, 후속 commit/push 및 원격 일치 확인 |
@@ -394,3 +394,17 @@ docs/2026-08-10-android-expo-go-validation-completion.md의 최신 인계 절을
 남은 2~5단계 중 내가 지정한 단계의 목표·완료 기준·내가 할 작업·네가 할 작업·제외 범위를 먼저 설명하고,
 아직 실제 변경이나 외부 작업은 시작하지 말고 내 시작 승인을 기다려줘.
 ```
+
+## 12. 2026-08-10 Public GitHub 저장소와 초기 push 완료
+
+상세 감사, commit 구성, 자동 검증, 1·2차 push와 새 세션 인계는 [Public GitHub 저장소와 초기 push handoff](./2026-08-10-github-repository-and-initial-push-handoff.md)를 기준으로 한다.
+
+- Public 저장소 [Jaehoon81/expo-webview-demo](https://github.com/Jaehoon81/expo-webview-demo)를 생성하고 local `origin`에 연결했다.
+- Git 작성자 email은 이 repository에만 GitHub ID 기반 `noreply`를 사용한다.
+- known secret·credential, 선택 사진·screenshot과 unrelated device identifier가 없음을 확인했다. demo email, 실제 LAN IP와 test IP도 공개용 값으로 정리했다.
+- `reset-project` 이전 staged/deleted 항목이 섞인 index를 빈 상태로 만든 뒤 현재 tree를 여섯 개 의미별 commit으로 구성했다.
+- 1차 push 기준 local `HEAD`와 remote `master`는 `651151fba37d61f51adaf95225a19242e4fffe18`로 일치했고, GitHub logout 상태에서도 Public·`master`·6 commits를 확인했다.
+- 공개 정리 후 `npm test -- --runInBand` 12개 suite·39개 test, typecheck, lint, dependency check와 Expo Doctor 18/18을 통과했다.
+- 실제 프로젝트 README와 이 결과 문서를 별도 `Docs:` commit으로 2차 push하고 local/remote parity를 다시 확인해 2단계를 닫는다.
+
+다음 작업은 3단계 Android development build와 외부 OS의 `mywebviewapp://webviewappdemo?...` 검증이다. 사용자가 3단계 시작을 명시하기 전에는 EAS, signing, build와 실기기 작업을 시작하지 않는다.

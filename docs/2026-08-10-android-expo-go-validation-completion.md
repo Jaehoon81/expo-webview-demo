@@ -229,7 +229,7 @@ Android Expo Go 구현·검증과 A-1~C-5 후속 표적 검증은 완료됐다. 
 
 | 단계 | 작업 | 상태 | 핵심 완료 증거 |
 |---|---|---|---|
-| 2 | Public GitHub 저장소 생성과 의미별 초기 commit/push | 진행 중 | 민감 정보 정리, 단계·기능·의미별 commit과 1차 push, 결과 문서 commit과 2차 push, local/remote 일치 |
+| 2 | Public GitHub 저장소 생성과 의미별 초기 commit/push | 완료 | [GitHub 초기 push handoff](./2026-08-10-github-repository-and-initial-push-handoff.md)의 공개 감사, 의미별 이력과 원격 일치 |
 | 3 | Android development build와 외부 custom scheme 검증 | 대기 | 외부 OS의 `mywebviewapp://webviewappdemo?...` cold/warm 진입과 영향 범위 실기기 결과 |
 | 4 | iOS 실기기 전체 흐름 검증 | 대기 | 참고 iOS 앱과의 기능 동등성 및 iOS 고유 탐색·권한·lifecycle 결과 |
 | 5 | 최종 인계 문서·source 주석·학습서 정리 | 대기 | 문서·주석·학습서 정합성, 전체 검사, 후속 commit/push와 원격 일치 |
@@ -258,10 +258,10 @@ Android Expo Go 구현·검증과 A-1~C-5 후속 표적 검증은 완료됐다. 
 2026-08-10 이 문서 갱신 시점의 재확인 결과는 다음과 같다. 새 세션에서는 외부 상태가 바뀔 수 있으므로 반드시 다시 확인한다.
 
 - Git branch: `master`
-- Git `HEAD`: 없음
+- Git `HEAD`: 1차 push 기준 `651151fba37d61f51adaf95225a19242e4fffe18`, 결과 문서 commit은 2차 push 대상
 - Git remote: `origin`을 `https://github.com/Jaehoon81/expo-webview-demo.git`에 연결
-- worktree/index: `reset-project` 전후의 staged·deleted·modified·untracked 항목이 혼재
-- GitHub 저장소: 사용자가 생성한 빈 Public `Jaehoon81/expo-webview-demo`, 첫 push 대기
+- worktree/index: 최초 index 재구성 후 1차 push 시점 clean, 결과 문서 갱신만 2차 commit 대상으로 분리
+- GitHub 저장소: Public [Jaehoon81/expo-webview-demo](https://github.com/Jaehoon81/expo-webview-demo), default branch `master`
 - Metro port 8081: 닫힘
 - Expo Go process: 중지
 - `adb reverse tcp:8081`: 제거됨
