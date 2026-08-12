@@ -181,6 +181,22 @@ source/test/config는 다음 의미 단위로 분리했다.
 
 `app.json`의 공개 EAS project 연결과 `eas.json`만 build commit에 포함했다. remote signing credential, generated `ios/`·`android/`, `.expo/`, IPA, APK, log, screenshot과 실기기 identifier는 Git에 포함하지 않았다. 이 문서와 기존 계획·handoff의 상태 갱신은 source commit과 분리한 `Docs:` commit으로 반영한다.
 
-## 9. 종료 상태와 다음 단계
+## 9. GitHub 1차 반영 결과
+
+4단계 시작 기준 local `HEAD`, `origin/master`와 `git ls-remote`는 모두 `330586de1c5745cf73624c116f13d016e6864ae5`였고 worktree는 clean이었다. 4단계에서 만든 build 설정과 기능 수정 4개 commit, 본 완료 결과 문서 commit을 `master`에 fast-forward push했다.
+
+| 순서 | Commit | 의미 |
+|---|---|---|
+| 1 | `427c5dec697f0de8526c4f3629dc15a82aa1725b` | EAS Preview 연결 설정 |
+| 2 | `7043ac5787d26786afec7cede4895b4451d4f398` | WebView 탭 상태·history 유지 |
+| 3 | `963fe2cae4e4ff490dabcc62931ff740c15a1ae0` | iOS popup inset·refresh lifecycle |
+| 4 | `552fc65d7d5de38403bae393b5bd6beedaffa130` | local HTML 버튼 feedback |
+| 5 | `bada27e6372ece4991cb3c66bcc94e4f12a88481` | 4단계 완료 결과와 인계 문서 |
+
+첫 push 뒤 local `HEAD`, `origin/master`, `git ls-remote --heads origin master`와 unauthenticated GitHub REST API의 `master` SHA가 모두 `bada27e6372ece4991cb3c66bcc94e4f12a88481`로 일치했고 ahead/behind는 `0 0`이었다. GitHub API에서 저장소 `Jaehoon81/expo-webview-demo`가 `public`, default branch가 `master`임도 다시 확인했다.
+
+첫 push 확인 중 README의 iOS 상태와 자동 test 수치가 4단계 이전 값인 것을 발견했다. README의 현재 검증 상태·문서 link와 본 GitHub 결과 기록은 기능 변경과 분리한 후속 `Docs:` commit으로 반영한다. 후속 commit의 정확한 SHA와 최종 parity는 Git history와 closeout 보고를 기준으로 한다.
+
+## 10. 종료 상태와 다음 단계
 
 4단계는 완료됐다. 다음 제품 단계는 5단계 `최종 인계 문서·source 주석·학습서 정리`다. 이번 closeout은 4단계 source·test·build config·검증 문서와 GitHub 반영까지만 수행하며, 5단계의 README·AGENTS·architecture·source commentary·learning guide 작업은 사용자의 별도 시작 지시 전에는 시작하지 않는다.

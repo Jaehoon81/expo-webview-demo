@@ -33,6 +33,8 @@ Expo SDK 54와 React Native로 구현한 WebView 기능 학습·검증용 데모
 
 Android Expo Go 흐름과 외부 OS에서 `mywebviewapp://`을 직접 실행하는 development build 경로를 실제 기기에서 검증했다. 현재 launcher-free debug development build는 JavaScript bundle을 내장하지 않으므로 실행 중인 Metro가 필요하다.
 
+iOS 전체 흐름은 EAS internal Preview Build를 iPhone 11에 설치해 검증했다. EAS build·credential과 iPhone 검증 결과는 아래 iOS 완료 문서를 따른다.
+
 ## 설치와 실행
 
 ```powershell
@@ -54,7 +56,7 @@ npx expo install --check
 npx expo-doctor
 ```
 
-2026-08-10 기준 결과는 12개 test suite·39개 test, typecheck, lint, Expo dependency check와 Expo Doctor 18/18 통과다.
+2026-08-12 기준 결과는 15개 test suite·47개 test, typecheck, lint, Expo dependency check와 Expo Doctor 18/18 통과다.
 
 ## 주요 경로
 
@@ -67,6 +69,7 @@ npx expo-doctor
 | `src/api/`, `src/schemas/` | 사용자 API 요청과 runtime response 검증 |
 | `src/store/` | 마지막 선택 탭 영속 상태 |
 | `src/web/` | 메인 WebView에 전달하는 로컬 HTML |
+| `app.json`, `eas.json` | app identifier와 EAS internal Preview Build 설정 |
 | `docs/` | 구현 계획, 실기기 검증과 단계별 handoff |
 
 ## 검증 상태
@@ -77,9 +80,9 @@ npx expo-doctor
 | Android 네트워크·reload 후속 A-1~C-5 | 통과 |
 | 자동 tests·typecheck·lint·Expo checks | 통과 |
 | Android development build와 외부 custom scheme | 통과 |
-| iOS 실기기 전체 흐름 | 대기 |
+| iOS EAS Preview Build와 실기기 전체 흐름 | 통과 |
 
-Android Expo Go의 상세 환경과 단계별 판정은 [Android Expo Go 검증 완료 보고서](./docs/2026-08-10-android-expo-go-validation-completion.md), development build·custom scheme·Metro-off ANR과 사용자 검증 방법은 [Android development build 검증 완료 문서](./docs/2026-08-11-android-development-build-and-custom-scheme-validation.md)를 기준으로 한다. Android 통과 결과를 iOS runtime 증거로 확대하지 않는다.
+Android Expo Go의 상세 환경과 단계별 판정은 [Android Expo Go 검증 완료 보고서](./docs/2026-08-10-android-expo-go-validation-completion.md), development build·custom scheme·Metro-off ANR과 사용자 검증 방법은 [Android development build 검증 완료 문서](./docs/2026-08-11-android-development-build-and-custom-scheme-validation.md)를 기준으로 한다. iOS build·수정·Android 표적 회귀·iPhone 결과는 [iOS EAS Preview Build와 실기기 검증 완료 문서](./docs/2026-08-12-ios-eas-preview-build-and-device-validation.md)를 기준으로 한다.
 
 ## 데모 데이터와 개인정보
 
@@ -93,5 +96,6 @@ Android Expo Go의 상세 환경과 단계별 판정은 [Android Expo Go 검증 
 - [2026-08-10 Android Expo Go 검증 완료 보고서](./docs/2026-08-10-android-expo-go-validation-completion.md)
 - [2026-08-10 Public GitHub 저장소와 초기 push handoff](./docs/2026-08-10-github-repository-and-initial-push-handoff.md)
 - [2026-08-11 Android development build와 외부 custom scheme 검증 완료](./docs/2026-08-11-android-development-build-and-custom-scheme-validation.md)
+- [2026-08-12 iOS EAS Preview Build와 실기기 전체 흐름 검증 완료](./docs/2026-08-12-ios-eas-preview-build-and-device-validation.md)
 
 최종 source 주석, 내부 architecture 문서와 학습서는 계획서의 5단계에서 보완한다.
