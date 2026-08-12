@@ -183,4 +183,10 @@ npx --no-install expo start --dev-client --localhost --port 8081
 - 2026-08-12 사용자가 source·test·문서의 의미별 commit과 `master` push를 승인했다. generated native output과 debug APK는 commit 대상에서 제외한다.
 - hydration source·test 변경은 `8abe661` (`Fix: cold deep link hydration 순서 보정`)로 먼저 분리했고, README·계획·검증 문서는 후속 `Docs:` commit으로 구성한다.
 
-3단계의 기능·build·실기기·사용자 검증·문서 완료 기준은 충족했다. 이번 Git 작업은 3단계 closeout에 한정하며, 다음 제품 단계인 iOS 실기기 4단계는 환경 준비와 사용자의 별도 시작 승인 뒤 진행한다.
+3단계의 기능·build·실기기·사용자 검증·문서 완료 기준은 충족했다. 3단계 종료 당시 이번 Git 작업은 해당 closeout에 한정했고, 다음 제품 단계인 iOS 실기기 4단계는 환경 준비와 사용자의 별도 시작 승인 뒤 진행하기로 했다.
+
+### 8.1 2026-08-12 후속 단계 갱신
+
+위 문장은 3단계 종료 당시의 다음 경계다. 이후 사용자가 4단계를 승인했고, macOS 대신 EAS internal Preview Build와 iPhone 11·iOS `18.7.8`을 사용해 iOS 전체 흐름을 완료했다. 상세 build·수정·Android 회귀·iPhone 결과는 [iOS EAS Preview Build와 실기기 전체 흐름 검증 완료 문서](./2026-08-12-ios-eas-preview-build-and-device-validation.md)를 따른다.
+
+2026-08-12 기준 2~4단계는 완료됐으며 다음 미완료 제품 단계는 5단계 `최종 인계 문서·source 주석·학습서 정리`다. 5단계는 4단계 closeout과 GitHub 원격 일치 확인 뒤 사용자의 별도 시작 지시를 기다린다.

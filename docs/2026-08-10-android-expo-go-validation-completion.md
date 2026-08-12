@@ -13,7 +13,7 @@ LG `LM-V500N`, Android 12(API 31), Expo Go `54.0.8`에서 Android Expo Go 인수
 
 다음 항목은 이번 완료 판정에 포함하지 않는다.
 
-- iOS 실기기 전체 흐름: Windows 환경이므로 미검증
+- iOS 실기기 전체 흐름: Android 완료 당시 Windows 환경이므로 미검증
 - 외부 OS에서 `mywebviewapp://`을 직접 실행하는 경로: Expo Go 제약 때문에 development build에서 별도 검증 필요
 - 원격 push notification: 데모 요구사항은 로컬 알림이며 원격 push는 범위 밖
 - Git commit/push: 수행하지 않고 기존 `reset-project` 이후 작업 상태를 보존
@@ -223,7 +223,7 @@ LG `LM-V500N`, Android 12(API 31), Expo Go `54.0.8`에서 A-1~C-5를 한 판정�
 | `npx expo install --check` | 의존성 정합성 통과 |
 | `npx expo-doctor` | 18/18 checks 통과 |
 
-## 9. 최신 남은 2~5단계와 새 세션 인계
+## 9. 2~5단계와 새 세션 인계
 
 Android Expo Go 구현·검증과 A-1~C-5 후속 표적 검증은 완료됐다. 2026-08-10 사용자의 최신 결정에 따라 Public GitHub 저장소와 초기 이력을 새 2단계로 편입하고 기존 작업을 3~5단계로 순연한다. 이후 작업은 [implementation-plan.md](./implementation-plan.md) 11절의 계약을 기준으로 한다.
 
@@ -231,10 +231,10 @@ Android Expo Go 구현·검증과 A-1~C-5 후속 표적 검증은 완료됐다. 
 |---|---|---|---|
 | 2 | Public GitHub 저장소 생성과 의미별 초기 commit/push | 완료 | [GitHub 초기 push handoff](./2026-08-10-github-repository-and-initial-push-handoff.md)의 공개 감사, 의미별 이력과 원격 일치 |
 | 3 | Android development build와 외부 custom scheme 검증 | 완료 | [2026-08-11 완료 문서](./2026-08-11-android-development-build-and-custom-scheme-validation.md)의 cold/warm 진입, 표적 회귀, Metro-off ANR과 사용자 HTTPS 링크 검증 |
-| 4 | iOS 실기기 전체 흐름 검증 | 대기 | 참고 iOS 앱과의 기능 동등성 및 iOS 고유 탐색·권한·lifecycle 결과 |
+| 4 | iOS 실기기 전체 흐름 검증 | 완료 | [2026-08-12 iOS 완료 문서](./2026-08-12-ios-eas-preview-build-and-device-validation.md)의 EAS Preview Build, iPhone 전체 결과와 Android 표적 회귀 |
 | 5 | 최종 인계 문서·source 주석·학습서 정리 | 대기 | 문서·주석·학습서 정합성, 전체 검사, 후속 commit/push와 원격 일치 |
 
-2026-08-12 후속 갱신으로 3단계를 완료 처리했다. 아래의 2단계 공개 감사와 일시적 상태는 2026-08-10 당시 이력으로 보존하며, 최신 상태는 [implementation-plan.md](./implementation-plan.md) 13절과 3단계 완료 문서를 우선한다.
+2026-08-12 후속 갱신으로 3단계와 4단계를 완료 처리했다. 아래의 2단계 공개 감사와 일시적 상태는 2026-08-10 당시 이력으로 보존하며, 최신 상태는 [implementation-plan.md](./implementation-plan.md) 14절과 4단계 완료 문서를 우선한다.
 
 ### 2단계 Public 공개 전 감사 상태
 
@@ -273,7 +273,7 @@ Android Expo Go 구현·검증과 A-1~C-5 후속 표적 검증은 완료됐다. 
 
 1. root `AGENTS.md`, [implementation-plan.md](./implementation-plan.md) 11절과 이 문서 9절을 끝까지 읽는다.
 2. source, package, Git, Metro·Expo Go와 build 환경을 실제로 다시 확인한다. 실기기는 사용자가 해당 단계의 검증 대상으로 명시한 경우에만 사용한다.
-3. 사용자가 지정한 2~5단계 중 하나만 대상으로 목표·완료 기준·사용자 수동 작업·Codex 작업·제외 범위를 먼저 제시한다.
+3. 완료된 2~4단계는 반복하지 않고, 현재 미완료인 5단계의 목표·완료 기준·사용자 수동 작업·Codex 작업·제외 범위를 먼저 제시한다.
 4. Android Expo Go 1~40단계와 A-1~C-5를 근거 없이 반복하지 않고, 변경 영향이 있는 항목만 표적 회귀 검증한다.
 5. source/config 변경, EAS·서명, Git commit/push와 다음 단계는 각각 필요한 조사와 사용자 승인을 거쳐 별도로 시작한다.
 
@@ -284,6 +284,19 @@ D:\Development\ReactNative\Workspaces\my-webview-app에서 AGENTS.md,
 docs/implementation-plan.md의 11절,
 docs/2026-08-10-android-expo-go-validation-completion.md의 9절을 읽고
 현재 source·Git·runtime 상태를 다시 확인해줘.
-남은 2~5단계 중 내가 지정한 단계의 목표·완료 기준·내가 할 작업·네가 할 작업·제외 범위를 먼저 설명하고,
+완료된 2~4단계는 반복하지 말고 5단계의 목표·완료 기준·내가 할 작업·네가 할 작업·제외 범위를 먼저 설명하고,
 아직 실제 변경이나 외부 작업은 시작하지 말고 내 시작 승인을 기다려줘.
 ```
+
+## 10. 2026-08-12 iOS 4단계 완료와 최신 인계
+
+Android Expo Go와 development build 결과는 이전 절의 이력으로 유지한다. 후속 4단계에서는 macOS 없이 EAS internal Preview Build를 생성하고 iPhone 11·iOS `18.7.8`에서 참고 iOS 앱과 Android 동등 전체 흐름을 검증했다.
+
+- EAS owner·project는 개인 계정 `jungjh0519`의 `@jungjh0519/my-webview-app`을 사용했다.
+- 최종 iOS build `108d6471-2b7d-4939-a910-3ac4061dfc2e`가 완료됐고 설치·첫 실행·네 탭을 확인했다.
+- Web 탭 상태·history, Android 하단 탭 layer, 네이버 content 재진입, popup safe area, iOS pull-to-refresh와 local HTML 버튼 feedback을 수정했다.
+- 수정된 Android 범위는 LG `LM-V500N`, Android 12에서 두 차례 표적 회귀해 모두 통과했다.
+- 사용자는 iPhone에서 Google/Bing, 일반·popup 탐색, 외부 앱, 자체 scheme·deep link, bridge 8종, notification, 단일·복수 사진, 하단 탭, 네이티브 사용자 목록, network·오류 retry와 Android에서 수행했던 나머지 전체 항목을 모두 통과했다고 확정했다.
+- 최종 자동 검사는 Jest 15 suites·47 tests, typecheck, lint, Expo dependency check와 Expo Doctor 18/18을 통과했다.
+
+상세 결과는 [iOS EAS Preview Build와 실기기 전체 흐름 검증 완료 문서](./2026-08-12-ios-eas-preview-build-and-device-validation.md)를 따른다. 다음 미완료 단계는 5단계 `최종 인계 문서·source 주석·학습서 정리`다. 4단계 closeout 이후 5단계는 사용자의 별도 시작 지시를 기다린다.
