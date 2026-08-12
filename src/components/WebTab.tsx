@@ -64,6 +64,7 @@ export const WebTab = forwardRef<WebTabHandle, WebTabProps>(function WebTab(
   const webViewRef = useRef<WebView>(null);
   const canGoBackRef = useRef(false);
   const canGoForwardRef = useRef(false);
+  const hasLoadedDocumentRef = useRef(false);
   const previousScrollOffsetRef = useRef(0);
   const [source, setSource] = useState<WebViewSource>(initialSource);
   const [reloadKey, setReloadKey] = useState(0);
@@ -82,6 +83,7 @@ export const WebTab = forwardRef<WebTabHandle, WebTabProps>(function WebTab(
     setLoadError(null);
     canGoBackRef.current = false;
     canGoForwardRef.current = false;
+    hasLoadedDocumentRef.current = false;
     setSource(initialSource);
     setReloadKey((current) => current + 1);
   }, [initialSource]);
@@ -92,10 +94,16 @@ export const WebTab = forwardRef<WebTabHandle, WebTabProps>(function WebTab(
       reloadInitial,
       loadUrl(url) {
         setLoadError(null);
-        canGoBackRef.current = false;
-        canGoForwardRef.current = false;
+
+        if (hasLoadedDocumentRef.current) {
+          const serializedUrl = JSON.stringify(url);
+          webViewRef.current?.injectJavaScript(
+            `window.location.assign(${serializedUrl}); true;`,
+          );
+          return;
+        }
+
         setSource({ uri: url });
-        setReloadKey((current) => current + 1);
       },
       goBack() {
         if (!canGoBackRef.current) {
@@ -121,9 +129,11 @@ export const WebTab = forwardRef<WebTabHandle, WebTabProps>(function WebTab(
   return (
     <View
       accessibilityElementsHidden={!active}
+      collapsable={false}
       importantForAccessibility={active ? "auto" : "no-hide-descendants"}
       pointerEvents={active ? "auto" : "none"}
-      style={[styles.container, !active && styles.hidden]}
+      style={[styles.container, !active && styles.inactive]}
+      testID={`web-tab-${tag}`}
     >
       {progress > 0 && progress < 1 ? (
         <View style={styles.progressTrack}>
@@ -136,6 +146,7 @@ export const WebTab = forwardRef<WebTabHandle, WebTabProps>(function WebTab(
         ref={webViewRef}
         source={source}
         style={styles.webView}
+        testID={`web-view-${tag}`}
         originWhitelist={["*"]}
         javaScriptEnabled
         domStorageEnabled
@@ -162,6 +173,7 @@ export const WebTab = forwardRef<WebTabHandle, WebTabProps>(function WebTab(
           setProgress(event.nativeEvent.progress);
         }}
         onLoadEnd={() => {
+          hasLoadedDocumentRef.current = true;
           setProgress(1);
         }}
         onNavigationStateChange={(navigationState) => {
@@ -187,7 +199,7 @@ export const WebTab = forwardRef<WebTabHandle, WebTabProps>(function WebTab(
           );
           previousScrollOffsetRef.current = currentOffset;
 
-          if (direction) {
+          if (active && direction) {
             onScrollDirection(direction);
           }
         }}
@@ -241,8 +253,8 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "#FFFFFF",
   },
-  hidden: {
-    display: "none",
+  inactive: {
+    opacity: 0,
   },
   webView: {
     flex: 1,
