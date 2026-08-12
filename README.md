@@ -31,7 +31,7 @@ Expo SDK 54와 React Native로 구현한 WebView 기능 학습·검증용 데모
 - Android 또는 iOS용 Expo Go
 - 외부 웹 페이지와 사용자 API 확인을 위한 네트워크 연결
 
-Android Expo Go 흐름은 실제 기기에서 검증했다. 외부 OS에서 `mywebviewapp://`을 직접 실행하는 경로는 Expo Go가 아니라 development build에서 별도로 검증할 예정이다.
+Android Expo Go 흐름과 외부 OS에서 `mywebviewapp://`을 직접 실행하는 development build 경로를 실제 기기에서 검증했다. 현재 launcher-free debug development build는 JavaScript bundle을 내장하지 않으므로 실행 중인 Metro가 필요하다.
 
 ## 설치와 실행
 
@@ -76,10 +76,10 @@ npx expo-doctor
 | Android Expo Go 1~40단계 | 통과 |
 | Android 네트워크·reload 후속 A-1~C-5 | 통과 |
 | 자동 tests·typecheck·lint·Expo checks | 통과 |
-| Android development build와 외부 custom scheme | 대기 |
+| Android development build와 외부 custom scheme | 통과 |
 | iOS 실기기 전체 흐름 | 대기 |
 
-Android의 상세 환경, 단계별 판정과 발견한 문제는 [Android Expo Go 검증 완료 보고서](./docs/2026-08-10-android-expo-go-validation-completion.md)를 기준으로 한다. Android 통과 결과를 iOS 또는 development build의 runtime 증거로 확대하지 않는다.
+Android Expo Go의 상세 환경과 단계별 판정은 [Android Expo Go 검증 완료 보고서](./docs/2026-08-10-android-expo-go-validation-completion.md), development build·custom scheme·Metro-off ANR과 사용자 검증 방법은 [Android development build 검증 완료 문서](./docs/2026-08-11-android-development-build-and-custom-scheme-validation.md)를 기준으로 한다. Android 통과 결과를 iOS runtime 증거로 확대하지 않는다.
 
 ## 데모 데이터와 개인정보
 
@@ -92,5 +92,6 @@ Android의 상세 환경, 단계별 판정과 발견한 문제는 [Android Expo 
 - [구현 계획서](./docs/implementation-plan.md)
 - [2026-08-10 Android Expo Go 검증 완료 보고서](./docs/2026-08-10-android-expo-go-validation-completion.md)
 - [2026-08-10 Public GitHub 저장소와 초기 push handoff](./docs/2026-08-10-github-repository-and-initial-push-handoff.md)
+- [2026-08-11 Android development build와 외부 custom scheme 검증 완료](./docs/2026-08-11-android-development-build-and-custom-scheme-validation.md)
 
 최종 source 주석, 내부 architecture 문서와 학습서는 계획서의 5단계에서 보완한다.

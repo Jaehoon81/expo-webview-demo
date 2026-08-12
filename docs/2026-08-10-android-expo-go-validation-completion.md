@@ -230,9 +230,11 @@ Android Expo Go 구현·검증과 A-1~C-5 후속 표적 검증은 완료됐다. 
 | 단계 | 작업 | 상태 | 핵심 완료 증거 |
 |---|---|---|---|
 | 2 | Public GitHub 저장소 생성과 의미별 초기 commit/push | 완료 | [GitHub 초기 push handoff](./2026-08-10-github-repository-and-initial-push-handoff.md)의 공개 감사, 의미별 이력과 원격 일치 |
-| 3 | Android development build와 외부 custom scheme 검증 | 대기 | 외부 OS의 `mywebviewapp://webviewappdemo?...` cold/warm 진입과 영향 범위 실기기 결과 |
+| 3 | Android development build와 외부 custom scheme 검증 | 완료 | [2026-08-11 완료 문서](./2026-08-11-android-development-build-and-custom-scheme-validation.md)의 cold/warm 진입, 표적 회귀, Metro-off ANR과 사용자 HTTPS 링크 검증 |
 | 4 | iOS 실기기 전체 흐름 검증 | 대기 | 참고 iOS 앱과의 기능 동등성 및 iOS 고유 탐색·권한·lifecycle 결과 |
 | 5 | 최종 인계 문서·source 주석·학습서 정리 | 대기 | 문서·주석·학습서 정합성, 전체 검사, 후속 commit/push와 원격 일치 |
+
+2026-08-12 후속 갱신으로 3단계를 완료 처리했다. 아래의 2단계 공개 감사와 일시적 상태는 2026-08-10 당시 이력으로 보존하며, 최신 상태는 [implementation-plan.md](./implementation-plan.md) 13절과 3단계 완료 문서를 우선한다.
 
 ### 2단계 Public 공개 전 감사 상태
 

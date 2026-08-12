@@ -323,7 +323,7 @@ Android 표적 재검증은 LG `LM-V500N`, Android 12(API 31), Expo Go `54.0.8`�
 | 단계 | 작업 | 상태 | 시작 조건 | 완료 기준 |
 |---|---|---|---|---|
 | 2 | Public GitHub 저장소 생성과 의미별 초기 commit/push | 완료 | 공개 전 민감 정보 감사, 사용자의 빈 저장소 생성 | 단계·기능·의미별 commit과 1차 push, GitHub 결과 문서 갱신 commit과 2차 push, local/remote 일치 확인 |
-| 3 | Android development build와 외부 custom scheme 검증 | 대기 | 2단계 완료, 사용자의 명시적 시작, build 방식·서명 범위 확인 | 외부 OS에서 `mywebviewapp://webviewappdemo?...` 진입과 영향 범위 회귀 검증 완료 |
+| 3 | Android development build와 외부 custom scheme 검증 | 완료 | 2단계 완료, 사용자의 명시적 시작, build 방식·서명 범위 확인 | [2026-08-11 완료 문서](./2026-08-11-android-development-build-and-custom-scheme-validation.md)의 cold/warm custom scheme, 표적 회귀와 자동 검사 |
 | 4 | iOS 실기기 전체 흐름 검증 | 대기 | macOS/Xcode/iPhone 또는 동등한 iOS build·설치 환경 준비 | 참고 iOS 앱과의 기능 동등성, iOS 고유 탐색·권한·lifecycle 검증 완료 |
 | 5 | 최종 인계 문서·source 주석·학습서 정리 | 대기 | 3~4단계 결과 확정, 최종 source freeze 후보 준비 | 필수 문서와 주석 완성, 전체 검증, 후속 commit/push 및 원격 일치 확인 |
 
@@ -407,4 +407,21 @@ docs/2026-08-10-android-expo-go-validation-completion.md의 최신 인계 절을
 - 공개 정리 후 `npm test -- --runInBand` 12개 suite·39개 test, typecheck, lint, dependency check와 Expo Doctor 18/18을 통과했다.
 - 실제 프로젝트 README와 이 결과 문서를 별도 `Docs:` commit으로 2차 push하고 local/remote parity를 다시 확인해 2단계를 닫는다.
 
-다음 작업은 3단계 Android development build와 외부 OS의 `mywebviewapp://webviewappdemo?...` 검증이다. 사용자가 3단계 시작을 명시하기 전에는 EAS, signing, build와 실기기 작업을 시작하지 않는다.
+2단계 종료 당시 다음 작업은 3단계 Android development build와 외부 OS의 `mywebviewapp://webviewappdemo?...` 검증이었다. 이 문장은 당시 인계 이력이며 최신 완료 상태는 아래 13절을 우선한다.
+
+## 13. 2026-08-11 Android development build와 외부 custom scheme 검증 완료
+
+상세 build 선택, source 수정, APK 검사, 실기기 증거와 종료 상태는 [Android development build와 외부 custom scheme 검증 완료 문서](./2026-08-11-android-development-build-and-custom-scheme-validation.md)를 기준으로 한다.
+
+- `expo-dev-client` launcher가 cold external intent보다 먼저 열리는 동작을 확인해 최종 dependency에서 제거하고, launcher-free local arm64 debug development build를 생성했다. EAS와 production signing은 사용하지 않았다.
+- APK의 debug signature, zipalign, package, `arm64-v8a`, `MainActivity`와 `mywebviewapp` scheme을 확인하고 LG `LM-V500N`, Android 12(API 31)에 `adb install -r`로 설치했다.
+- cold `target=1&url=m.nate.com`은 `LaunchState: COLD`, `MainActivity`, 네이버 탭 선택과 `https://m.nate.com/` 로드를 통과했다. 실행 중 `target=3`, 잘못된 `target=4`, `target=0`도 기존 instance 전달·탭 선택·오류 유지 기준을 통과했다.
+- cold URI에서 Root `Stack` mount 전 `router.setParams`가 호출되는 결함을 발견해 hydration loading gate를 index route로 이동하고 회귀 테스트를 추가했다. persisted state 형식과 loading UX는 유지했다.
+- 사진 권한·DocumentsUI 취소, local notification, `tel:` dialer 전환·복귀, Android 두 번-back만 표적 회귀했다. 완료된 Expo Go 1~40단계와 A-1~C-5는 반복하지 않았다.
+- 최종 source에서 Jest 13 suites·40 tests, typecheck, lint, Expo dependency check와 Expo Doctor 18/18을 통과했다. npm audit의 moderate 12건·high 13건은 SDK major 변경과 분리해 기록만 남겼다.
+- Metro가 꺼진 launcher-free debug APK에서 JavaScript bundle 로드 실패 뒤 앱 Window가 사라지고, 이 상태에서 Android back 입력이 약 10초간 포커스 Window를 기다리다가 `Application does not have a focused window` ANR로 이어지는 경로를 실제 `/data/anr` 기록으로 확인했다.
+- 2026-08-12 사용자가 Metro를 실행하고 개인용 HTTPS 테스트 페이지에서 `target=1&url=m.nate.com`, `target=3`, 잘못된 `target=4` 링크 버튼을 직접 눌러 cold·warm·거부 흐름이 모두 정상임을 확인했다.
+- 최초 자동 검증 종료 시 Metro, host `8081`, ADB reverse·forward와 기기 진단 임시 파일을 정리했다. generated `android/`와 debug APK는 계속 ignored 상태로 유지하며 Git에 포함하지 않는다.
+- 2026-08-12 사용자가 3단계 source·test·문서의 commit/push를 승인했다. source·test와 문서를 의미별 commit으로 분리하고 원격 일치를 확인해 Git 반영을 닫는다.
+
+다음 제품 단계는 iOS 실기기 환경이 준비된 뒤 시작하는 4단계다. 이번 Git 반영은 3단계 closeout에 한정하며 4단계를 자동으로 시작하지 않는다.
