@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -35,6 +36,13 @@ type NativeUsersScreenProps = {
   bottomContentInset: number;
   onScrollDirection: (direction: ScrollDirection) => void;
 };
+
+type RefreshResultAlert = {
+  title: string;
+  message: string;
+};
+
+const IOS_PULL_REFRESH_ALERT_DELAY_MS = 300;
 
 function UserRow({ user }: { user: User }) {
   return (
@@ -68,6 +76,17 @@ export const NativeUsersScreen = forwardRef<
   const scrollStartOffsetRef = useRef(0);
   const handledInitialResultRef = useRef(false);
   const hasActivatedRef = useRef(false);
+  const isDraggingRef = useRef(false);
+  const pendingPullRefreshAlertRef = useRef<RefreshResultAlert | null>(null);
+  const pullRefreshAlertTimerRef = useRef<ReturnType<
+    typeof setTimeout
+  > | null>(null);
+
+  useEffect(() => () => {
+    if (pullRefreshAlertTimerRef.current !== null) {
+      clearTimeout(pullRefreshAlertTimerRef.current);
+    }
+  }, []);
 
   useEffect(() => {
     if (active) {
@@ -93,7 +112,29 @@ export const NativeUsersScreen = forwardRef<
     }
   }, [active, usersQuery.error, usersQuery.isError, usersQuery.isFetched]);
 
-  const refetch = useCallback(async (showResultAlert = false) => {
+  const showPullRefreshResultAlert = useCallback((
+    resultAlert: RefreshResultAlert,
+  ) => {
+    if (isDraggingRef.current) {
+      pendingPullRefreshAlertRef.current = resultAlert;
+      return;
+    }
+
+    if (pullRefreshAlertTimerRef.current !== null) {
+      clearTimeout(pullRefreshAlertTimerRef.current);
+    }
+
+    pullRefreshAlertTimerRef.current = setTimeout(() => {
+      pendingPullRefreshAlertRef.current = null;
+      pullRefreshAlertTimerRef.current = null;
+      Alert.alert(resultAlert.title, resultAlert.message);
+    }, IOS_PULL_REFRESH_ALERT_DELAY_MS);
+  }, []);
+
+  const refetch = useCallback(async (
+    showResultAlert = false,
+    deferUntilPullGestureEnds = false,
+  ) => {
     if (showResultAlert) {
       handledInitialResultRef.current = true;
     }
@@ -104,12 +145,22 @@ export const NativeUsersScreen = forwardRef<
       return;
     }
 
-    if (result.isError) {
-      Alert.alert("사용자 조회 실패", result.error.message);
+    const resultAlert = result.isError
+      ? {
+          title: "사용자 조회 실패",
+          message: result.error.message,
+        }
+      : {
+          title: "사용자 조회 완료",
+          message: "사용자 목록을 새로 불러왔습니다.",
+        };
+
+    if (deferUntilPullGestureEnds) {
+      showPullRefreshResultAlert(resultAlert);
     } else {
-      Alert.alert("사용자 조회 완료", "사용자 목록을 새로 불러왔습니다.");
+      Alert.alert(resultAlert.title, resultAlert.message);
     }
-  }, [usersQuery]);
+  }, [showPullRefreshResultAlert, usersQuery]);
 
   const refetchIfActivated = useCallback(async (
     showResultAlert = false,
@@ -198,10 +249,20 @@ export const NativeUsersScreen = forwardRef<
         ItemSeparatorComponent={() => <View style={styles.separator} />}
         refreshing={usersQuery.isRefetching}
         onRefresh={() => {
-          void refetch(true);
+          void refetch(true, Platform.OS === "ios");
         }}
         onScrollBeginDrag={(event) => {
+          isDraggingRef.current = true;
           scrollStartOffsetRef.current = event.nativeEvent.contentOffset.y;
+        }}
+        onScrollEndDrag={() => {
+          isDraggingRef.current = false;
+
+          if (pendingPullRefreshAlertRef.current !== null) {
+            showPullRefreshResultAlert(
+              pendingPullRefreshAlertRef.current,
+            );
+          }
         }}
         onScroll={handleScroll}
         scrollEventThrottle={100}

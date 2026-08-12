@@ -10,13 +10,16 @@ import {
   Alert,
   Modal,
   Pressable,
-  SafeAreaView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import * as Linking from "expo-linking";
+import {
+  SafeAreaProvider,
+  SafeAreaView,
+} from "react-native-safe-area-context";
 import { WebView } from "react-native-webview";
 
 import {
@@ -127,51 +130,52 @@ export const PopupWebView = forwardRef<
       presentationStyle="fullScreen"
       visible={url !== null}
     >
-      <SafeAreaView style={styles.safeArea}>
-        <NetworkStatusBanner visible={networkOffline} />
+      <SafeAreaProvider>
+        <SafeAreaView edges={["top"]} style={styles.safeArea}>
+          <NetworkStatusBanner visible={networkOffline} />
 
-        <View style={styles.header}>
-          <Pressable
-            accessibilityLabel="팝업 뒤로가기"
-            accessibilityRole="button"
-            hitSlop={10}
-            onPress={() => {
-              if (canGoBackRef.current) {
-                webViewRef.current?.goBack();
-              } else {
-                Alert.alert("알림", "이전 페이지가 없습니다.");
-              }
-            }}
-            style={styles.headerButton}
-          >
-            <Ionicons color="#0F172A" name="arrow-back" size={24} />
-          </Pressable>
-          <Text numberOfLines={1} style={styles.title}>
-            팝업 웹 페이지
-          </Text>
-          <Pressable
-            accessibilityLabel="팝업 닫기"
-            accessibilityRole="button"
-            hitSlop={10}
-            onPress={onClose}
-            style={styles.headerButton}
-          >
-            <Ionicons color="#0F172A" name="close" size={26} />
-          </Pressable>
-        </View>
-
-        {progress > 0 && progress < 1 ? (
-          <View style={styles.progressTrack}>
-            <View
-              style={[
-                styles.progressValue,
-                { width: `${progress * 100}%` },
-              ]}
-            />
+          <View style={styles.header}>
+            <Pressable
+              accessibilityLabel="팝업 뒤로가기"
+              accessibilityRole="button"
+              hitSlop={10}
+              onPress={() => {
+                if (canGoBackRef.current) {
+                  webViewRef.current?.goBack();
+                } else {
+                  Alert.alert("알림", "이전 페이지가 없습니다.");
+                }
+              }}
+              style={styles.headerButton}
+            >
+              <Ionicons color="#0F172A" name="arrow-back" size={24} />
+            </Pressable>
+            <Text numberOfLines={1} style={styles.title}>
+              팝업 웹 페이지
+            </Text>
+            <Pressable
+              accessibilityLabel="팝업 닫기"
+              accessibilityRole="button"
+              hitSlop={10}
+              onPress={onClose}
+              style={styles.headerButton}
+            >
+              <Ionicons color="#0F172A" name="close" size={26} />
+            </Pressable>
           </View>
-        ) : null}
 
-        <View style={styles.webContent}>
+          {progress > 0 && progress < 1 ? (
+            <View style={styles.progressTrack}>
+              <View
+                style={[
+                  styles.progressValue,
+                  { width: `${progress * 100}%` },
+                ]}
+              />
+            </View>
+          ) : null}
+
+          <View style={styles.webContent}>
           {currentUrl ? (
             <WebView
               key={webViewKey}
@@ -254,8 +258,9 @@ export const PopupWebView = forwardRef<
               </View>
             </View>
           ) : null}
-        </View>
-      </SafeAreaView>
+          </View>
+        </SafeAreaView>
+      </SafeAreaProvider>
     </Modal>
   );
 });

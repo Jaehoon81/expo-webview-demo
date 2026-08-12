@@ -1,5 +1,5 @@
 import { createRef, type RefObject } from "react";
-import { Alert } from "react-native";
+import { Alert, Platform } from "react-native";
 import {
   act,
   fireEvent,
@@ -161,5 +161,86 @@ describe("NativeUsersScreen", () => {
       "사용자 조회 완료",
       "사용자 목록을 새로 불러왔습니다.",
     );
+  });
+
+  it("iOS pull-to-refresh 결과는 손을 놓은 뒤 알린다", async () => {
+    jest.replaceProperty(Platform, "OS", "ios");
+    const alertSpy = jest.spyOn(Alert, "alert").mockImplementation();
+    const refetch = jest.fn().mockResolvedValue({
+      error: null,
+      isError: false,
+    });
+    mockedUseUsersQuery.mockReturnValue(
+      createUsersQuery({ isFetched: false, refetch }),
+    );
+
+    const view = await renderScreen(true);
+    const refreshableLists = view.container.queryAll(
+      (instance) =>
+        typeof instance.props.onRefresh === "function" &&
+        typeof instance.props.onScrollBeginDrag === "function" &&
+        typeof instance.props.onScrollEndDrag === "function",
+    );
+
+    expect(refreshableLists).toHaveLength(1);
+
+    const [list] = refreshableLists;
+
+    await fireEvent(list, "scrollBeginDrag", {
+      nativeEvent: { contentOffset: { x: 0, y: -80 } },
+    });
+    await fireEvent(list, "refresh");
+
+    await waitFor(() => {
+      expect(refetch).toHaveBeenCalledTimes(1);
+    });
+    expect(alertSpy).not.toHaveBeenCalled();
+
+    await fireEvent(list, "scrollEndDrag", {
+      nativeEvent: { contentOffset: { x: 0, y: -80 } },
+    });
+
+    await waitFor(() => {
+      expect(alertSpy).toHaveBeenCalledWith(
+        "사용자 조회 완료",
+        "사용자 목록을 새로 불러왔습니다.",
+      );
+    });
+  });
+
+  it("Android pull-to-refresh 결과는 기존처럼 즉시 알린다", async () => {
+    jest.replaceProperty(Platform, "OS", "android");
+    const alertSpy = jest.spyOn(Alert, "alert").mockImplementation();
+    const refetch = jest.fn().mockResolvedValue({
+      error: null,
+      isError: false,
+    });
+    mockedUseUsersQuery.mockReturnValue(
+      createUsersQuery({ isFetched: false, refetch }),
+    );
+
+    const view = await renderScreen(true);
+    const refreshableLists = view.container.queryAll(
+      (instance) =>
+        typeof instance.props.onRefresh === "function" &&
+        typeof instance.props.onScrollBeginDrag === "function" &&
+        typeof instance.props.onScrollEndDrag === "function",
+    );
+
+    expect(refreshableLists).toHaveLength(1);
+
+    const [list] = refreshableLists;
+
+    await fireEvent(list, "scrollBeginDrag", {
+      nativeEvent: { contentOffset: { x: 0, y: -80 } },
+    });
+    await fireEvent(list, "refresh");
+
+    await waitFor(() => {
+      expect(alertSpy).toHaveBeenCalledWith(
+        "사용자 조회 완료",
+        "사용자 목록을 새로 불러왔습니다.",
+      );
+    });
   });
 });
