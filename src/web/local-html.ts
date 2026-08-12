@@ -59,14 +59,6 @@ export const LOCAL_DEMO_HTML = `<!doctype html>
         touch-action: manipulation;
         -webkit-tap-highlight-color: transparent;
         box-shadow: 0 2px 5px rgba(15, 23, 42, 0.12);
-        transition:
-          transform 90ms ease-out,
-          background-color 90ms ease-out,
-          box-shadow 90ms ease-out;
-      }
-      button:active {
-        transform: translateY(2px) scale(0.985);
-        box-shadow: inset 0 2px 4px rgba(15, 23, 42, 0.18);
       }
       button:focus-visible {
         outline: 3px solid #0ea5e9;
@@ -78,7 +70,9 @@ export const LOCAL_DEMO_HTML = `<!doctype html>
         color: #075985;
       }
       .device-actions button:active {
-        background: #bae6fd;
+        border-color: #075985;
+        background: #075985;
+        color: #e0f2fe;
       }
       .tab-actions button {
         border-color: #bbf7d0;
@@ -86,7 +80,9 @@ export const LOCAL_DEMO_HTML = `<!doctype html>
         color: #166534;
       }
       .tab-actions button:active {
-        background: #bbf7d0;
+        border-color: #166534;
+        background: #166534;
+        color: #dcfce7;
       }
       .photo-actions button {
         border-color: #fed7aa;
@@ -94,7 +90,9 @@ export const LOCAL_DEMO_HTML = `<!doctype html>
         color: #9a3412;
       }
       .photo-actions button:active {
-        background: #fed7aa;
+        border-color: #9a3412;
+        background: #9a3412;
+        color: #ffedd5;
       }
       .photo {
         width: 100%;
@@ -201,23 +199,23 @@ export const LOCAL_DEMO_HTML = `<!doctype html>
 
     <section class="card device-actions">
       <h2>기기와 메시지</h2>
-      <button onclick="showMobileType()">스마트폰 종류 출력 요청</button>
-      <button onclick="sendNative('getDeviceUUID', undefined, '')">기기 고유번호 전달 요청</button>
-      <button onclick="sendNative('showToastMessage', ['토스트 메시지 테스트!!'])">토스트 메시지 출력 요청</button>
-      <button onclick="sendNative('showNotiMessage', ['노티 메시지 테스트!!', '노티 메시지 테스트입니다.'])">노티 메시지 출력 요청</button>
+      <button ontouchstart="" onclick="showMobileType()">스마트폰 종류 출력 요청</button>
+      <button ontouchstart="" onclick="sendNative('getDeviceUUID', undefined, '')">기기 고유번호 전달 요청</button>
+      <button ontouchstart="" onclick="sendNative('showToastMessage', ['토스트 메시지 테스트!!'])">토스트 메시지 출력 요청</button>
+      <button ontouchstart="" onclick="sendNative('showNotiMessage', ['노티 메시지 테스트!!', '노티 메시지 테스트입니다.'])">노티 메시지 출력 요청</button>
     </section>
 
     <section class="card tab-actions">
       <h2>탭 제어</h2>
-      <button onclick="sendNative('reloadOtherTabs')">나머지 탭 리로드</button>
-      <button onclick="sendNative('goToAnotherTab', ['f1', 'https://m.nate.com'])">다른 탭 이동 및 URL 로드</button>
-      <button onclick="sendNative('showBottomNaviView')">하단 탭 영역 보여주기</button>
-      <button onclick="sendNative('hideBottomNaviView')">하단 탭 영역 숨기기</button>
+      <button ontouchstart="" onclick="sendNative('reloadOtherTabs')">나머지 탭 리로드</button>
+      <button ontouchstart="" onclick="sendNative('goToAnotherTab', ['f1', 'https://m.nate.com'])">다른 탭 이동 및 URL 로드</button>
+      <button ontouchstart="" onclick="sendNative('showBottomNaviView')">하단 탭 영역 보여주기</button>
+      <button ontouchstart="" onclick="sendNative('hideBottomNaviView')">하단 탭 영역 숨기기</button>
     </section>
 
     <section class="card photo-actions">
       <h2>사진</h2>
-      <button onclick="sendNative('getPhotoImages')">사진 이미지 전달 요청</button>
+      <button ontouchstart="" onclick="sendNative('getPhotoImages')">사진 이미지 전달 요청</button>
       <img id="image1" class="photo" alt="첫 번째 선택 사진" />
       <textarea id="photo1_name" rows="1" readonly></textarea>
       <img id="image2" class="photo" alt="두 번째 선택 사진" />

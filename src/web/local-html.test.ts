@@ -25,8 +25,16 @@ describe("LOCAL_DEMO_HTML", () => {
     );
   });
 
-  it("카테고리별 버튼 색상과 눌림 피드백을 포함한다", () => {
-    expect(LOCAL_DEMO_HTML).toContain("button:active");
+  it("카테고리별 버튼이 지연 없이 색상 반전 눌림 피드백을 표시한다", () => {
+    expect(LOCAL_DEMO_HTML.match(/<button ontouchstart=""/g)).toHaveLength(9);
+    expect(LOCAL_DEMO_HTML).not.toContain("transition:");
+    expect(LOCAL_DEMO_HTML).not.toContain("transform:");
+    expect(LOCAL_DEMO_HTML).toContain(".device-actions button:active");
+    expect(LOCAL_DEMO_HTML).toContain(".tab-actions button:active");
+    expect(LOCAL_DEMO_HTML).toContain(".photo-actions button:active");
+    expect(LOCAL_DEMO_HTML).toContain("background: #075985");
+    expect(LOCAL_DEMO_HTML).toContain("background: #166534");
+    expect(LOCAL_DEMO_HTML).toContain("background: #9a3412");
     expect(LOCAL_DEMO_HTML).toContain('class="card device-actions"');
     expect(LOCAL_DEMO_HTML).toContain('class="card tab-actions"');
     expect(LOCAL_DEMO_HTML).toContain('class="card photo-actions"');
