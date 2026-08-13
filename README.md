@@ -8,7 +8,7 @@ Expo SDK 54와 React Native로 구현한 WebView 기능 학습·검증용 데모
 ## 주요 기능
 
 - 메인 로컬 HTML, 네이버, 다음, 네이티브 사용자 목록의 네 탭
-- WebView 동일 창 navigation, 전체 화면 popup, history와 오류·retry 처리
+- WebView 동일 창 navigation, 전체 화면 popup, history와 하단 탭 inset을 반영한 오류·retry 처리
 - `getDeviceUUID`, Toast, 로컬 notification, 다른 탭 reload·이동, 하단 탭 표시·숨김, 사진 선택 bridge
 - `tel:`, `sms:`, `mailto:` 외부 앱과 `mywebviewapp://webviewappdemo` deep link 분류
 - Zustand와 SecureStore를 이용한 마지막 선택 탭 복원
@@ -33,7 +33,7 @@ Expo SDK 54와 React Native로 구현한 WebView 기능 학습·검증용 데모
 
 Android Expo Go 흐름과 외부 OS에서 `mywebviewapp://`을 직접 실행하는 development build 경로를 실제 기기에서 검증했다. 현재 launcher-free debug development build는 JavaScript bundle을 내장하지 않으므로 실행 중인 Metro가 필요하다.
 
-iOS 전체 흐름은 EAS internal Preview Build를 iPhone 11에 설치해 검증했다. EAS build·credential과 iPhone 검증 결과는 아래 iOS 완료 문서를 따른다.
+iOS 전체 흐름은 EAS internal Preview Build를 iPhone 11에 설치해 검증했다. 2026-08-13에는 이전 인수에서 누락된 실제 네트워크 단절도 Android와 iPhone에서 후속 검증해 WebView 오류·loading 정렬과 iOS 반복 retry 중 하단 탭 유지를 통과했다. EAS build·credential과 iPhone 검증 결과는 아래 iOS 완료 문서를 따른다.
 
 ## 설치와 실행
 
@@ -56,7 +56,7 @@ npx expo install --check
 npx expo-doctor
 ```
 
-2026-08-12 기준 결과는 15개 test suite·47개 test, typecheck, lint, Expo dependency check와 Expo Doctor 18/18 통과다.
+2026-08-13 기준 결과는 15개 test suite·50개 test, typecheck, lint, Expo dependency check와 Expo Doctor 18/18 통과다.
 
 ## 주요 경로
 
@@ -81,6 +81,7 @@ npx expo-doctor
 | 자동 tests·typecheck·lint·Expo checks | 통과 |
 | Android development build와 외부 custom scheme | 통과 |
 | iOS EAS Preview Build와 실기기 전체 흐름 | 통과 |
+| Android/iOS WebView 오프라인 오류 화면·retry 후속 회귀 | 통과 |
 
 Android Expo Go의 상세 환경과 단계별 판정은 [Android Expo Go 검증 완료 보고서](./docs/2026-08-10-android-expo-go-validation-completion.md), development build·custom scheme·Metro-off ANR과 사용자 검증 방법은 [Android development build 검증 완료 문서](./docs/2026-08-11-android-development-build-and-custom-scheme-validation.md)를 기준으로 한다. iOS build·수정·Android 표적 회귀·iPhone 결과는 [iOS EAS Preview Build와 실기기 검증 완료 문서](./docs/2026-08-12-ios-eas-preview-build-and-device-validation.md)를 기준으로 한다.
 

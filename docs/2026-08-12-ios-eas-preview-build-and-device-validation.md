@@ -1,11 +1,12 @@
 # iOS EAS Preview Build와 실기기 전체 흐름 검증 완료
 
 - 완료일: 2026-08-12
+- 후속 오프라인 회귀 완료일: 2026-08-13
 - 구현 계획 단계: 4단계 `iOS 실기기 전체 흐름 검증`
 - 기준 branch·시작 SHA: `master`, `330586de1c5745cf73624c116f13d016e6864ae5`
 - 기준 remote: `origin/master`, 시작 시 local과 일치
 - 참고 iOS 앱: `D:\Development\iOS\Workspaces\WebViewAppDemo`
-- 관련 계획: [implementation-plan.md](./implementation-plan.md) 11절·14절
+- 관련 계획: [implementation-plan.md](./implementation-plan.md) 11절·14~15절
 
 ## 1. 목표와 완료 판정
 
@@ -21,6 +22,8 @@
 - 확인 결과를 `확인됨`, `미확인`, `차단 요소`로 분리하고 source/test/config와 문서의 Git 경계를 남긴다.
 
 2026-08-12 사용자는 핵심 시나리오, 수정하면서 추가한 시나리오, 앞서 Android에서 수행했던 전체 인수 항목을 iPhone에서 동일하게 검증했고 모두 통과했다고 최종 확정했다. 따라서 4단계 기능·build·설치·실기기 완료 기준은 충족했다.
+
+다만 2026-08-13 사용자가 이전 iPhone 인수 과정에서 실제 네트워크 단절 재현을 빠뜨렸음을 확인했다. 이 항목은 당시 통과로 소급하지 않고 별도 후속 회귀로 다시 수행했으며, 발견한 WebView 오류 화면 정렬과 iOS 오프라인 retry 중 하단 탭 문제를 수정한 뒤 Android와 iPhone에서 모두 통과했다. 최신 판정은 이 문서 11절을 함께 기준으로 한다.
 
 ## 2. 실제 환경과 외부 경계
 
@@ -51,9 +54,10 @@
 | `a6c69bf5-4bab-46b6-8e6f-49db09327301` | `FINISHED` | 초기 Preview Build. 설치·첫 실행·네 탭 확인에 사용했으나 후속 source 수정 전 산출물이므로 최종 판정에서는 대체됐다. |
 | `8bdba63f-a73d-4061-8829-6491f639fb89` | `CANCELED` | 사용자가 Preview Build 전 대기를 요청한 시점에 최종 source가 아닌 build를 계속 사용하지 않도록 취소했다. 설치·검증 산출물로 사용하지 않았다. |
 | `8c1a3857-008c-42b0-928d-bb91dfa5f973` | `FINISHED` | WebView 탭 lifecycle·history와 Android 회귀 수정이 포함된 중간 build. iPhone 검증에서 popup safe area와 길게 유지한 pull-to-refresh 문제를 발견했다. |
-| `108d6471-2b7d-4939-a910-3ac4061dfc2e` | `FINISHED` | 최종 Preview Build. 수정된 popup inset, refresh lifecycle과 HTML 버튼 feedback을 포함하며 iPhone 전체 검증을 통과했다. |
+| `108d6471-2b7d-4939-a910-3ac4061dfc2e` | `FINISHED` | 2026-08-12 당시 최종 Preview Build. 수정된 popup inset, refresh lifecycle과 HTML 버튼 feedback을 포함하며 당시 iPhone 전체 검증을 통과했으나, 이후 실제 네트워크 단절 항목 누락이 확인돼 후속 build로 대체됐다. |
+| `681c24bd-c90e-4fc3-ba47-b8ff6efb8840` | `FINISHED` | 2026-08-13 최종 Preview Build. WebView 오류 화면·loading 정렬과 iOS 오프라인 retry 중 하단 탭 유지를 포함하며 Android 표적 회귀와 iPhone 후속 검증을 통과했다. |
 
-최종 build 페이지는 [EAS Build 108d6471](https://expo.dev/accounts/jungjh0519/projects/my-webview-app/builds/108d6471-2b7d-4939-a910-3ac4061dfc2e)이다. internal artifact는 EAS의 만료 정책을 따르므로 영구 배포 URL로 간주하지 않는다. 최종 제출 직후 artifact가 HTTP 200으로 내려오는 것과 실제 iPhone 설치·실행을 각각 확인했다.
+현재 최종 build 페이지는 [EAS Build 681c24bd](https://expo.dev/accounts/jungjh0519/projects/my-webview-app/builds/681c24bd-c90e-4fc3-ba47-b8ff6efb8840)이다. internal artifact는 EAS의 만료 정책을 따르므로 영구 배포 URL로 간주하지 않는다. 최종 제출 직후 artifact가 HTTP 200으로 내려오는 것과 실제 iPhone 설치·실행을 각각 확인했다.
 
 EAS CLI는 `cli.appVersionSource`가 향후 필수가 된다는 경고와 `ios.infoPlist.ITSAppUsesNonExemptEncryption` 미설정 경고를 표시했다. 두 항목은 이번 ad hoc Preview 설치를 막지 않았으며, App Store/TestFlight를 시작할 때 실제 암호화 사용 범위와 version source 정책을 결정한 뒤 별도로 처리한다. 이번 4단계에서는 추측으로 값을 추가하지 않았다.
 
@@ -110,7 +114,7 @@ Android와 iPhone에서 9개 버튼의 즉시 색상 반전·즉시 복귀와 �
 
 ## 5. 자동 검사와 Android 표적 회귀
 
-최종 source에서 다음 자동 검사를 다시 실행했다.
+2026-08-12 당시 source에서 다음 자동 검사를 다시 실행했다.
 
 | 검사 | 결과 |
 |---|---|
@@ -145,7 +149,9 @@ Android와 iPhone에서 9개 버튼의 즉시 색상 반전·즉시 복귀와 �
 | 사진 | 권한 흐름, 단일·복수 이미지 전달, 이름·이미지 표시, 취소·재시도 | 통과 |
 | 네이티브 사용자 목록 | 최초 조회, scroll, reload, 빠른 pull과 길게 유지한 pull-to-refresh, spinner 복귀 | 통과 |
 | 하단 탭·화면 lifecycle | scroll·keyboard에 따른 show/hide, tab 전환과 상태 복원 | 통과 |
-| network·오류 복구 | network 배너, WebView/API 오류 표시와 수동 retry | 통과 |
+| network·오류 복구 | network 배너, WebView/API 오류 표시, retry·초기 화면과 하단 탭 유지 | 2026-08-13 후속 통과 |
+
+2026-08-12 표에는 network·오류 복구가 통과로 정리됐지만, 사용자가 2026-08-13 실제 네트워크 단절 재현이 누락됐음을 확인했다. 위 행은 후속 build와 실기기 검증으로 보완한 최신 판정이며, 당시 수행하지 않은 항목을 자동 검사만으로 통과 처리한 것이 아니다.
 
 ## 7. 확인됨·미확인·차단 요소
 
@@ -155,6 +161,7 @@ Android와 iPhone에서 9개 버튼의 즉시 색상 반전·즉시 복귀와 �
 - 참고 iOS 앱과 공통인 사용자 기능과 iOS 고유 navigation·safe area·touch lifecycle
 - Android 수정 영향 표적 회귀
 - source/test/config 자동 검사와 공개 전 credential·기기 식별자 감사
+- 네트워크 단절 상태의 WebView 오류 화면, retry·초기 화면, loading 전환과 iOS 하단 탭 유지
 
 ### 미확인 또는 4단계 제외
 
@@ -178,6 +185,7 @@ source/test/config는 다음 의미 단위로 분리했다.
 | `7043ac5787d26786afec7cede4895b4451d4f398` | `Fix: WebView 탭 상태와 탐색 history 유지` |
 | `963fe2cae4e4ff490dabcc62931ff740c15a1ae0` | `Fix: iOS popup inset과 새로고침 lifecycle 보정` |
 | `552fc65d7d5de38403bae393b5bd6beedaffa130` | `Fix: WebView HTML 버튼 눌림 피드백 개선` |
+| `073c2cad87ccd2b8dc6d91dd604fa631b4829fff` | `Fix: WebView 오프라인 오류 화면과 복구 보정` |
 
 `app.json`의 공개 EAS project 연결과 `eas.json`만 build commit에 포함했다. remote signing credential, generated `ios/`·`android/`, `.expo/`, IPA, APK, log, screenshot과 실기기 identifier는 Git에 포함하지 않았다. 이 문서와 기존 계획·handoff의 상태 갱신은 source commit과 분리한 `Docs:` commit으로 반영한다.
 
@@ -200,3 +208,37 @@ source/test/config는 다음 의미 단위로 분리했다.
 ## 10. 종료 상태와 다음 단계
 
 4단계는 완료됐다. 다음 제품 단계는 5단계 `최종 인계 문서·source 주석·학습서 정리`다. 이번 closeout은 4단계 source·test·build config·검증 문서와 GitHub 반영까지만 수행하며, 5단계의 README·AGENTS·architecture·source commentary·learning guide 작업은 사용자의 별도 시작 지시 전에는 시작하지 않는다.
+
+## 11. 2026-08-13 오프라인 오류 복구 후속 검증
+
+### 11.1 발견한 차이와 source 수정
+
+이전 iPhone 전체 검증에서 실제 네트워크 단절 항목이 빠진 것을 확인한 뒤 네이버·다음 탭을 오프라인으로 다시 검증했다.
+
+- WebView 오류 overlay는 전체 탭 영역의 중앙에 있었지만 하단 탭이 absolute layer로 겹쳐 실제 보이는 영역에서는 제목·내용·버튼 묶음이 아래로 치우쳐 보였다. `DemoShell`이 이미 계산하던 `60 + safe-area bottom`을 `WebTab`에 전달하고, 오류 overlay의 bottom padding에 반영해 Android와 iOS의 가시 영역 중앙을 맞췄다.
+- iOS에서 오프라인 상태로 `다시 시도` 또는 `초기 화면`을 누르면 WKWebView가 load 전환 중 보낸 scroll event가 하단 탭 숨김으로 해석됐다. 오류 발생부터 성공 `onLoad`까지 iOS 오류 복구 ref로 합성 scroll 전달을 막고, 오류·retry·초기 화면에서는 하단 탭 표시를 유지했다. 성공 뒤에는 ref를 해제해 정상 scroll show/hide로 복귀한다. Android 경로는 이 iOS 조건 밖에 유지했다.
+- `renderLoading`의 spinner와 `웹 페이지를 불러오고 있습니다.` 묶음에는 하단 탭 inset이 없어서 오류 화면과 전환될 때 세로 위치가 달랐다. loading과 오류 overlay가 같은 `padding: 24`와 같은 bottom inset style을 사용하도록 맞췄다.
+- 네이티브 사용자 목록의 loading과 오류 화면은 기존부터 같은 `centeredContentStyle`과 `bottomContentInset + 24`를 사용하므로 추가 source 변경이 필요하지 않았다.
+
+### 11.2 자동·Android·iPhone 검증
+
+| 검증 | 결과 |
+|---|---|
+| Jest | 15 suites, 50 tests 통과 |
+| TypeScript | `npm run typecheck` 통과 |
+| ESLint | `npm run lint` 통과 |
+| Expo dependency | `npx expo install --check` 통과 |
+| Expo Doctor | 18/18 통과 |
+| Android 표적 회귀 | 오류 화면 위치, retry·초기 화면, loading 전환과 기존 하단 탭 동작 모두 통과 |
+| iOS 최종 build | `681c24bd-c90e-4fc3-ba47-b8ff6efb8840`, `FINISHED`, internal `preview` |
+| iPhone 11·iOS `18.7.8` | 네이버·다음 오프라인 오류 위치, 두 버튼의 반복 실패, 하단 탭 유지, loading 위치, 네트워크 복원 후 정상 load와 scroll 동작 모두 통과 |
+
+사용자는 먼저 Android에서 요청한 수정 사항을 모두 확인하고 통과를 확정했다. 이어 현재 최종 EAS build를 iPhone에 설치해 같은 항목을 실기 검증했고 모두 통과했다고 확정했다. build 성공이나 자동 테스트만으로 실기기 성공을 대신 판정하지 않았다.
+
+### 11.3 최신 경계와 다음 시작점
+
+- source/test는 `073c2cad87ccd2b8dc6d91dd604fa631b4829fff`로 문서와 분리했다.
+- 새 package, native config, EAS profile과 credential 변경은 없다. 기존 remote credential과 등록 기기를 재사용했으며 signing identifier, 기기 identifier와 IPA는 Git에 기록하지 않는다.
+- EAS의 `cli.appVersionSource` 향후 필수화와 `ios.infoPlist.ITSAppUsesNonExemptEncryption` 미설정 경고는 이번 ad hoc Preview Build를 막지 않았다. App Store/TestFlight 범위에서 실제 정책을 정하기 전에는 추측으로 config를 추가하지 않는다.
+- Android용 새 APK는 만들지 않았고 Metro runtime에서 영향 범위만 재검증한 뒤 Metro `8081`을 종료했다.
+- 4단계의 누락된 network 실기 항목까지 보완됐으며 차단 요소는 없다. 다음 미완료 제품 단계는 여전히 5단계이고, 이 문서·GitHub closeout 뒤 사용자의 별도 시작 지시를 기다린다.

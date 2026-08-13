@@ -190,3 +190,11 @@ npx --no-install expo start --dev-client --localhost --port 8081
 위 문장은 3단계 종료 당시의 다음 경계다. 이후 사용자가 4단계를 승인했고, macOS 대신 EAS internal Preview Build와 iPhone 11·iOS `18.7.8`을 사용해 iOS 전체 흐름을 완료했다. 상세 build·수정·Android 회귀·iPhone 결과는 [iOS EAS Preview Build와 실기기 전체 흐름 검증 완료 문서](./2026-08-12-ios-eas-preview-build-and-device-validation.md)를 따른다.
 
 2026-08-12 기준 2~4단계는 완료됐으며 다음 미완료 제품 단계는 5단계 `최종 인계 문서·source 주석·학습서 정리`다. 5단계는 4단계 closeout과 GitHub 원격 일치 확인 뒤 사용자의 별도 시작 지시를 기다린다.
+
+### 8.2 2026-08-13 오프라인 후속 회귀
+
+4단계 완료 뒤 실제 iPhone 네트워크 단절 항목이 누락된 것을 확인해 WebView 오류 화면·loading의 하단 탭 inset과 iOS 오프라인 retry lifecycle을 보완했다. Android 공통 영향은 기존 launcher-free development build가 Metro에서 현재 JavaScript를 읽는 runtime으로 표적 검증했으며, 사용자는 오류 위치, retry·초기 화면, loading 전환과 하단 탭 동작을 모두 통과했다고 확정했다.
+
+이번 변경은 JavaScript source/test에 한정돼 새 Android APK를 생성하거나 package·manifest·scheme·native build 설정을 변경하지 않았다. Android 검증 뒤 Metro `8081`을 종료했고, iOS는 별도 EAS internal Preview Build `681c24bd-c90e-4fc3-ba47-b8ff6efb8840`으로 실기기 확인을 마쳤다. 상세 원인과 최신 결과는 [iOS 4단계 완료 문서](./2026-08-12-ios-eas-preview-build-and-device-validation.md) 11절을 따른다.
+
+source/test는 `073c2cad87ccd2b8dc6d91dd604fa631b4829fff`로 문서와 분리했다. 3단계 development build와 custom scheme 판정은 그대로 유지되며, 다음 미완료 제품 단계는 여전히 5단계다.
