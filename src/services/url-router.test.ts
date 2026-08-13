@@ -1,3 +1,5 @@
+// [파일 역할] deep link parsing, HTTPS 정규화와 일반/popup URL decision의 대표 허용·거부 표를 순수 검증합니다.
+// [검증 경계] URL 문자열 분류만 확인하며 WebView navigation, OS 외부 앱 설치와 cold/warm intent 전달은 실행하지 않습니다.
 import {
   classifyNavigationUrl,
   classifyPopupUrl,
@@ -29,6 +31,7 @@ describe("URL router", () => {
   });
 
   it("범위를 벗어난 탭과 HTTP target URL을 거부한다", () => {
+    // 유효한 scheme이어도 tab domain과 nested target URL 정책을 각각 통과해야 합니다.
     expect(
       parseDemoDeepLink(
         "mywebviewapp://webviewappdemo?target=4&url=m.nate.com",
@@ -64,6 +67,7 @@ describe("URL router", () => {
   });
 
   it("새 창을 부모, 외부 브라우저, 팝업으로 분류한다", () => {
+    // 각 결과를 실제로 load/open/modal 처리하는 책임은 DemoShell과 PopupWebView에 있습니다.
     expect(classifyPopupUrl("https://m.naver.com/news").type).toBe(
       "parent",
     );

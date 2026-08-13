@@ -1,3 +1,5 @@
+// [파일 역할] 검증된 bridge request를 주입된 app 기능에 dispatch하고 모든 결과를 하나의 response envelope로 정규화합니다.
+// [검증 경계] 단위 test는 dependency spy와 response 계약을 확인하며 실제 권한 UI·알림·사진 picker·WebView 주입은 runtime 경계입니다.
 import { ZodError } from "zod";
 
 import { parseBridgeRequest, readBridgeEnvelope } from "@/src/bridge/schema";
@@ -11,6 +13,7 @@ function success<T>(
   action: string,
   result: T,
 ): BridgeResponse<T> {
+  // success/failure helper가 모든 action에서 uuid·action·isError 모양을 동일하게 유지합니다.
   return {
     uuid,
     action,
@@ -36,11 +39,13 @@ export async function dispatchBridgeMessage(
   message: string,
   dependencies: BridgeDependencies,
 ): Promise<BridgeResponse> {
+  // parse 전에 fallback envelope를 읽어 invalid params나 dependency 예외에도 요청 식별자를 돌려줄 수 있게 합니다.
   const fallback = readBridgeEnvelope(message);
 
   try {
     const request = parseBridgeRequest(message);
 
+    // [FLOW-05 / 5단계] discriminated union이 좁힌 action별 params를 대응 dependency에 전달하고 Promise 완료까지 기다립니다.
     switch (request.action) {
       case "getDeviceUUID":
         return success(
@@ -67,6 +72,7 @@ export async function dispatchBridgeMessage(
         );
         return success(request.uuid, request.action, "");
       case "showBottomNaviView":
+        // 동기 React state setter도 다른 비동기 action과 같은 envelope로 즉시 완료합니다.
         dependencies.setBottomNaviVisible(true);
         return success(request.uuid, request.action, "");
       case "hideBottomNaviView":
@@ -80,6 +86,7 @@ export async function dispatchBridgeMessage(
         );
     }
   } catch (error) {
+    // Zod 오류는 내부 path를 노출하지 않고 사용자용 형식 오류로, 기기 기능 Error는 의도된 message로 변환합니다.
     const message =
       error instanceof ZodError
         ? "요청 형식 또는 Parameter 값이 올바르지 않습니다."

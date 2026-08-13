@@ -1,3 +1,5 @@
+// [파일 역할] persisted store hydration 전 loading gate와 완료 뒤 DemoShell mount 순서를 화면 수준에서 검증합니다.
+// [검증 경계] Zustand persist와 DemoShell은 mock이므로 실제 SecureStore 복원·Root Stack·cold deep link 동작을 증명하지 않습니다.
 import { render, screen } from "@testing-library/react-native";
 
 import IndexScreen from "@/app/index";
@@ -12,6 +14,7 @@ jest.mock("@/src/components/DemoShell", () => {
 });
 
 jest.mock("@/src/store/app-store", () => ({
+  // selector가 받는 hasHydrated만 test가 직접 바꿀 수 있는 Hook 대역입니다.
   useAppStore: jest.fn(),
 }));
 
@@ -38,6 +41,7 @@ describe("IndexScreen hydration gate", () => {
     expect(screen.queryByText("DemoShell mock")).toBeNull();
 
     hasHydrated = true;
+    // 같은 route를 rerender해 loading과 shell이 동시에 존재하지 않는 전환을 확인합니다.
     await rerender(<IndexScreen />);
 
     expect(

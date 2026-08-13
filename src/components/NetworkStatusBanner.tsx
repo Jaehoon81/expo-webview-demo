@@ -1,3 +1,4 @@
+// [파일 역할] DemoShell이 판정한 offline boolean을 모든 tab 위의 지속형·접근 가능한 안내로 표시합니다.
 import { StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -12,6 +13,7 @@ export function NetworkStatusBanner({
     return null;
   }
 
+  // [FLOW-09 / 3단계] 연결이 NONE인 동안만 banner를 mount하며 실제 request 성공/실패를 대신 판정하지 않습니다.
   return (
     <View
       accessible

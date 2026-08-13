@@ -1,3 +1,5 @@
+// [파일 역할] WebTab의 mount 유지, active scroll, imperative load/history, inset 오류 UI와 iOS/Android 복구 분기를 검증합니다.
+// [검증 경계] react-native-webview를 View 대역으로 바꾸므로 prop·callback·remount 계약만 확인하며 실제 WebView engine load/history는 실기기 경계입니다.
 import { createRef, type Ref } from "react";
 import {
   act,
@@ -22,6 +24,7 @@ jest.mock("react-native-webview", () => {
 
   return {
     WebView: React.forwardRef(function MockWebView(props, ref) {
+      // production component가 호출하는 두 imperative method와 mount 수명만 관찰 가능한 대역입니다.
       React.useImperativeHandle(
         ref,
         () => ({
@@ -46,6 +49,7 @@ function renderWebTab(
   forwardedRef?: Ref<WebTabHandle>,
   bottomContentInset = 0,
 ) {
+  // 각 test가 active, scroll spy, forwarded ref와 bottom inset만 바꾸고 나머지 계약은 동일하게 유지합니다.
   return (
     <WebTab
       active={active}
@@ -82,6 +86,7 @@ describe("WebTab", () => {
     expect(inactiveTab.props.collapsable).toBe(false);
     expect(inactiveTab.props.pointerEvents).toBe("none");
 
+    // 같은 rendered tree를 active로 바꿔 unmount 없이 visibility/input만 복구되는지 확인합니다.
     await view.rerender(renderWebTab(true));
 
     const activeTab = screen.getByTestId("web-tab-f1");
@@ -112,6 +117,7 @@ describe("WebTab", () => {
   });
 
   it("첫 document load 전 loadUrl은 source에 예약한다", async () => {
+    // loadEnd 이전에는 inject 대상 document가 없다는 production branch를 ref 명령으로 재현합니다.
     const webTabRef = createRef<WebTabHandle>();
     await render(renderWebTab(true, jest.fn(), webTabRef));
 
@@ -136,6 +142,7 @@ describe("WebTab", () => {
 
     await fireEvent(webView, "loadEnd");
 
+    // 동일 URL 반복도 source prop 교체가 아니라 두 번의 location.assign으로 history에 이어져야 합니다.
     await act(() => {
       webTabRef.current?.loadUrl("https://m.naver.com/target");
       webTabRef.current?.loadUrl("https://m.naver.com/target");
@@ -156,6 +163,7 @@ describe("WebTab", () => {
     expect(mockWebViewDidUnmount).not.toHaveBeenCalled();
 
     await act(() => {
+      // reloadInitial은 의도적으로 key를 바꾸므로 이 지점에서만 WebView 대역이 remount됩니다.
       webTabRef.current?.reloadInitial();
     });
 
@@ -164,6 +172,7 @@ describe("WebTab", () => {
   });
 
   it("오류 화면은 하단 탭 inset을 제외한 영역의 중앙에 표시한다", async () => {
+    // Platform replacement는 실제 Android WebView를 실행하는 것이 아니라 platform 조건부 JS branch만 선택합니다.
     jest.replaceProperty(Platform, "OS", "android");
     await render(renderWebTab(true, jest.fn(), undefined, 80));
     const preventDefault = jest.fn();
@@ -227,6 +236,7 @@ describe("WebTab", () => {
     expect(onScrollDirection).not.toHaveBeenCalled();
 
     await fireEvent(webView, "load");
+    // 성공 load callback 뒤에는 recovery flag가 해제돼 같은 scroll이 다시 실제 direction으로 전달됩니다.
     await fireEvent.scroll(webView, {
       nativeEvent: { contentOffset: { y: 60 } },
     });

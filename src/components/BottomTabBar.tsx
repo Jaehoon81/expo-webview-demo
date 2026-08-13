@@ -1,3 +1,4 @@
+// [파일 역할] 공통 탭 정의를 네 개 접근 가능한 Pressable로 표시하고 선택 index를 DemoShell에 전달합니다.
 import { Ionicons } from "@expo/vector-icons";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -18,6 +19,7 @@ export function BottomTabBar({
 }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
 
+  // [FLOW-08 / 5단계] bar 자체가 bottom safe-area padding을 소유하며 DemoShell은 이 전체 높이를 animation/inset 계산에 사용합니다.
   return (
     <View
       accessibilityRole="tablist"
@@ -33,6 +35,7 @@ export function BottomTabBar({
             accessibilityState={{ selected }}
             key={tab.tag}
             onPress={() => {
+              // [FLOW-02 / 3단계] 화면 component는 tab 동작을 판단하지 않고 type-safe index만 parent selector에 전달합니다.
               onSelect(tab.index);
             }}
             style={({ pressed }) => [

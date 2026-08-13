@@ -1,3 +1,6 @@
+// [파일 역할] 네이티브 tab의 사용자 Query 상태, 목록·pull-to-refresh UI와 parent가 호출하는 refetch handle을 소유합니다.
+// [FLOW-07] 사용자 API 흐름은 tab 활성화, Query/Axios 요청, Zod 정규화, cache 상태 render와 명시적 refetch로 이어집니다.
+// [검증 경계] test는 Query Hook과 Alert를 mock하므로 UI state·gesture 후처리는 확인하지만 실제 HTTP/cache timing·native gesture는 증명하지 않습니다.
 import {
   forwardRef,
   useCallback,
@@ -45,6 +48,7 @@ type RefreshResultAlert = {
 const IOS_PULL_REFRESH_ALERT_DELAY_MS = 300;
 
 function UserRow({ user }: { user: User }) {
+  // API 전체 object가 아니라 schema가 정규화한 id/name/email만 표시하는 순수 row component입니다.
   return (
     <View
       accessibilityLabel={`${user.name}, ${user.email}`}
@@ -72,6 +76,7 @@ export const NativeUsersScreen = forwardRef<
   { active, bottomContentInset, onScrollDirection },
   forwardedRef,
 ) {
+  // [FLOW-07 / 1단계] active=true인 동안만 Query를 enable해 앱 시작 시 보이지 않는 native tab의 요청을 지연합니다.
   const usersQuery = useUsersQuery(active);
   const scrollStartOffsetRef = useRef(0);
   const handledInitialResultRef = useRef(false);
@@ -83,6 +88,7 @@ export const NativeUsersScreen = forwardRef<
   > | null>(null);
 
   useEffect(() => () => {
+    // iOS pull gesture 뒤 지연된 Alert가 unmount 후 나타나지 않도록 timer를 정리합니다.
     if (pullRefreshAlertTimerRef.current !== null) {
       clearTimeout(pullRefreshAlertTimerRef.current);
     }
@@ -90,6 +96,7 @@ export const NativeUsersScreen = forwardRef<
 
   useEffect(() => {
     if (active) {
+      // 한 번이라도 실제 표시된 뒤에는 reloadOtherTabs가 이 tab의 cache를 refetch할 수 있습니다.
       hasActivatedRef.current = true;
     }
   }, [active]);
@@ -105,6 +112,7 @@ export const NativeUsersScreen = forwardRef<
 
     handledInitialResultRef.current = true;
 
+    // 최초 active fetch 결과만 자동 Alert로 알리고 이후 결과는 사용자가 시작한 refetch 경로에서 알립니다.
     if (usersQuery.isError) {
       Alert.alert("사용자 조회 실패", usersQuery.error.message);
     } else {
@@ -115,6 +123,7 @@ export const NativeUsersScreen = forwardRef<
   const showPullRefreshResultAlert = useCallback((
     resultAlert: RefreshResultAlert,
   ) => {
+    // [FLOW-07 / 7단계] iOS는 drag 중 native refresh UI와 Alert가 경쟁하지 않도록 손을 놓은 뒤 짧게 지연합니다.
     if (isDraggingRef.current) {
       pendingPullRefreshAlertRef.current = resultAlert;
       return;
@@ -135,6 +144,7 @@ export const NativeUsersScreen = forwardRef<
     showResultAlert = false,
     deferUntilPullGestureEnds = false,
   ) => {
+    // [FLOW-07 / 6단계] retry·재선택·pull-to-refresh가 공유하는 Query refetch와 결과 안내 경로입니다.
     if (showResultAlert) {
       handledInitialResultRef.current = true;
     }
@@ -165,6 +175,7 @@ export const NativeUsersScreen = forwardRef<
   const refetchIfActivated = useCallback(async (
     showResultAlert = false,
   ) => {
+    // background WebView의 reloadOtherTabs 요청이 사용자가 아직 열지 않은 native tab의 첫 API call을 몰래 시작하지 않게 합니다.
     if (!hasActivatedRef.current) {
       return;
     }
@@ -188,6 +199,7 @@ export const NativeUsersScreen = forwardRef<
     );
 
     if (direction) {
+      // [FLOW-08 / 관련 코드] FlatList도 WebView와 같은 pure direction helper를 사용해 shell에 신호만 전달합니다.
       onScrollDirection(direction);
     }
   };
@@ -198,6 +210,7 @@ export const NativeUsersScreen = forwardRef<
   ];
 
   const renderContent = () => {
+    // [FLOW-07 / 5단계] 하나의 Query result를 pending, error/retry, empty, success list UI로 분기합니다.
     if (usersQuery.isPending) {
       return (
         <View
@@ -212,6 +225,7 @@ export const NativeUsersScreen = forwardRef<
     }
 
     if (usersQuery.isError) {
+      // [FLOW-09 / 관련 코드] network banner가 사라져도 실패한 Query는 자동 복구하지 않고 이 retry button을 기다립니다.
       return (
         <View accessibilityRole="alert" style={centeredContentStyle}>
           <Ionicons color="#DC2626" name="alert-circle-outline" size={42} />

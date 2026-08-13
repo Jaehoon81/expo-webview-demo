@@ -1,3 +1,5 @@
+// [파일 역할] 사용자 API retry 정책이 network/5xx만 한 번 허용하고 4xx·취소·schema 오류를 거부하는지 검증합니다.
+// [검증 경계] Axios request를 보내지 않는 순수 policy test이므로 timeout, AbortSignal, 실제 HTTP 응답과 Query 재시도 실행은 확인하지 않습니다.
 import type { AxiosError } from "axios";
 
 import { shouldRetryUsersRequest } from "@/src/api/users";
@@ -7,6 +9,7 @@ function makeAxiosError(options: {
   hasRequest?: boolean;
   canceled?: boolean;
 }): Error {
+  // Axios helper가 식별할 최소 runtime property만 가진 error fixture를 만듭니다.
   return {
     name: options.canceled ? "CanceledError" : "AxiosError",
     message: "request failed",
@@ -24,6 +27,7 @@ describe("shouldRetryUsersRequest", () => {
     const error = makeAxiosError({ hasRequest: true });
 
     expect(shouldRetryUsersRequest(0, error)).toBe(true);
+    // failureCount 1은 이미 첫 재시도를 소비했다는 뜻입니다.
     expect(shouldRetryUsersRequest(1, error)).toBe(false);
   });
 

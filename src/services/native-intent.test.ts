@@ -1,3 +1,5 @@
+// [파일 역할] system path의 custom-scheme/Expo Go 모양을 index route canonical query로 바꾸는 문자열 계약을 검증합니다.
+// [검증 경계] Expo Router hook만 테스트하며 Android intent filter, iOS scheme registration과 실제 app launch는 확인하지 않습니다.
 import { rewriteIncomingSystemPath } from "@/src/services/native-intent";
 
 describe("rewriteIncomingSystemPath", () => {
@@ -22,6 +24,7 @@ describe("rewriteIncomingSystemPath", () => {
   });
 
   it("관련 없는 route는 변경하지 않는다", () => {
+    // demo가 아닌 route를 rewrite가 가로채지 않는 보존 경계입니다.
     expect(rewriteIncomingSystemPath("/settings")).toBe("/settings");
   });
 

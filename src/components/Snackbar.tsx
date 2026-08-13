@@ -1,3 +1,4 @@
+// [파일 역할] ToastAndroid가 없는 iOS에서 bridge message를 3초 동안 표시하고 수동 닫기도 제공합니다.
 import { useEffect } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
@@ -14,6 +15,7 @@ export function Snackbar({ message, onDismiss }: SnackbarProps) {
 
     const timer = setTimeout(onDismiss, 3_000);
     return () => {
+      // message 변경이나 unmount 때 이전 timer가 새 message를 조기에 닫지 않도록 취소합니다.
       clearTimeout(timer);
     };
   }, [message, onDismiss]);

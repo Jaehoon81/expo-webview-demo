@@ -1,3 +1,5 @@
+// [파일 역할] template literal payload에 bridge/navigation/photo DOM과 회귀된 layout·touch CSS가 존재하는지 정적 검증합니다.
+// [검증 경계] 문자열 포함 검사는 browser JavaScript 실행, DOM event, WebView bridge 왕복과 실제 이미지 표시를 증명하지 않습니다.
 import { BRIDGE_ACTIONS } from "@/src/bridge/types";
 import { LOCAL_DEMO_HTML } from "@/src/web/local-html";
 
@@ -7,6 +9,7 @@ describe("LOCAL_DEMO_HTML", () => {
   });
 
   it("참고 앱의 8개 bridge action과 callback을 포함한다", () => {
+    // BridgeAction 기준 배열을 순회해 action을 하나씩 hard-code하다 누락하는 일을 줄입니다.
     for (const action of BRIDGE_ACTIONS) {
       expect(LOCAL_DEMO_HTML).toContain(action);
     }
@@ -26,6 +29,7 @@ describe("LOCAL_DEMO_HTML", () => {
   });
 
   it("카테고리별 버튼이 지연 없이 색상 반전 눌림 피드백을 표시한다", () => {
+    // iOS WebView에서 확인한 즉시 feedback 회귀를 payload 문자열 수준에서 고정합니다.
     expect(LOCAL_DEMO_HTML.match(/<button ontouchstart=""/g)).toHaveLength(9);
     expect(LOCAL_DEMO_HTML).not.toContain("transition:");
     expect(LOCAL_DEMO_HTML).not.toContain("transform:");

@@ -1,3 +1,5 @@
+// [파일 역할] WebView demo 전용 local notification handler·권한·Android channel·예약과 app lifecycle listener를 관리합니다.
+// [검증 경계] 이 module의 API 호출만으로 OS tray 표시·권한 선택·background 수신을 증명하지 않으며 해당 결과는 실기기 기록을 따릅니다.
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 
@@ -7,6 +9,7 @@ const DEMO_NOTIFICATION_SOURCE = "webview-demo";
 let handlerConfigured = false;
 
 export function configureNotificationHandler(): void {
+  // process 전역 handler를 component render마다 중복 설정하지 않도록 module flag로 한 번만 등록합니다.
   if (handlerConfigured) {
     return;
   }
@@ -23,6 +26,7 @@ export function configureNotificationHandler(): void {
 }
 
 async function ensureNotificationPermission(): Promise<void> {
+  // 사진과 마찬가지로 알림 action을 실제 호출할 때 기존 권한을 확인하고 필요한 경우에만 요청합니다.
   let permission = await Notifications.getPermissionsAsync();
 
   if (!permission.granted) {
@@ -35,6 +39,7 @@ async function ensureNotificationPermission(): Promise<void> {
 }
 
 async function configureAndroidChannel(): Promise<void> {
+  // Android 8+ 표시 정책과 Android 13 권한 prompt 선행 조건을 위한 channel이며 iOS에서는 실행하지 않습니다.
   if (Platform.OS !== "android") {
     return;
   }
@@ -48,6 +53,7 @@ async function configureAndroidChannel(): Promise<void> {
 }
 
 async function cancelPendingDemoNotifications(): Promise<void> {
+  // source marker가 같은 아직 예약된 demo 알림만 취소하고 다른 기능이나 이미 전달된 알림은 건드리지 않습니다.
   const scheduled = await Notifications.getAllScheduledNotificationsAsync();
   const demoNotifications = scheduled.filter(
     ({ content }) => content.data?.source === DEMO_NOTIFICATION_SOURCE,
@@ -64,6 +70,7 @@ export async function showDemoNotification(
   title: string,
   body?: string,
 ): Promise<void> {
+  // [FLOW-05 / 관련 코드] channel → 권한 → 이전 demo 예약 정리 → 새 단발 예약 순서를 직렬로 보장합니다.
   configureNotificationHandler();
   await configureAndroidChannel();
   await ensureNotificationPermission();
@@ -89,6 +96,7 @@ export async function showDemoNotification(
 }
 
 export function subscribeToNotificationEvents(): () => void {
+  // DemoShell mount 수명 동안 수신/탭 listener를 유지하고 cleanup 함수에서 둘 다 제거합니다.
   const receivedSubscription = Notifications.addNotificationReceivedListener(
     (notification) => {
       console.info(
@@ -109,6 +117,7 @@ export function subscribeToNotificationEvents(): () => void {
     });
 
   return () => {
+    // [주의] cleanup 누락 시 DemoShell remount 뒤 동일 notification을 여러 listener가 처리할 수 있습니다.
     receivedSubscription.remove();
     responseSubscription.remove();
   };

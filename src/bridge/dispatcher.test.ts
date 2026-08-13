@@ -1,7 +1,10 @@
+// [파일 역할] 8개 bridge action의 dependency 전달, 공통 성공 envelope와 validation/service 실패 envelope를 단위 검증합니다.
+// [검증 경계] 모든 dependency가 Jest mock이므로 실제 SecureStore·Toast·알림·사진·탭 UI와 WebView callback 실행은 증명하지 않습니다.
 import { dispatchBridgeMessage } from "@/src/bridge/dispatcher";
 import type { BridgeDependencies } from "@/src/bridge/types";
 
 function makeDependencies(): jest.Mocked<BridgeDependencies> {
+  // 실제 interface 모양을 유지한 새 mock 묶음을 test마다 만들어 호출 기록이 서로 섞이지 않게 합니다.
   return {
     getDeviceUUID: jest.fn().mockResolvedValue("device-id"),
     showToastMessage: jest.fn(),
@@ -124,6 +127,7 @@ describe("dispatchBridgeMessage", () => {
   });
 
   it("잘못된 action과 parameter를 error envelope로 반환한다", async () => {
+    // unknown action과 known action의 params 누락을 함께 확인해 JSON parse 성공만으로 요청을 허용하지 않음을 검증합니다.
     const dependencies = makeDependencies();
     const unknownAction = await dispatchBridgeMessage(
       JSON.stringify({ uuid: "bad-id", action: "unknownAction" }),
@@ -146,6 +150,7 @@ describe("dispatchBridgeMessage", () => {
   it("기기 기능 오류를 같은 envelope로 변환한다", async () => {
     const dependencies = makeDependencies();
     dependencies.getPhotoImages.mockRejectedValue(
+      // picker 취소처럼 dependency가 던진 Error message가 uuid/action을 유지한 실패 응답으로 바뀌는 fixture입니다.
       new Error("사진 선택을 취소했습니다."),
     );
 

@@ -1,3 +1,5 @@
+// [파일 역할] 하단 바 scroll threshold·top 복귀와 Android 이중 back 시간 window를 순수 검증합니다.
+// [검증 경계] 실제 gesture event 빈도, Animated.View 이동과 BackHandler.exitApp 호출은 이 suite에서 실행하지 않습니다.
 import {
   getScrollDirection,
   isDoubleBackPress,
@@ -5,6 +7,7 @@ import {
 
 describe("scroll and back navigation utilities", () => {
   it("8px 이상 이동할 때만 방향을 반환한다", () => {
+    // 작은 delta, 아래, 위, top 복귀 네 경계를 한 표본씩 비교합니다.
     expect(getScrollDirection(0, 4)).toBeNull();
     expect(getScrollDirection(0, 12)).toBe("down");
     expect(getScrollDirection(40, 20)).toBe("up");

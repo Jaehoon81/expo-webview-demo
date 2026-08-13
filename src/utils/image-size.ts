@@ -1,3 +1,4 @@
+// [파일 역할] 원본 종횡비를 유지하면서 긴 변만 제한하도록 ImageManipulator resize 입력을 계산합니다.
 export function getConstrainedImageSize(
   width: number,
   height: number,
@@ -8,6 +9,7 @@ export function getConstrainedImageSize(
   }
 
   if (Math.max(width, height) <= maxDimension) {
+    // null은 해당 축을 직접 지정하지 않으며 작은 이미지는 resize 자체를 생략하라는 신호입니다.
     return { width: null, height: null };
   }
 

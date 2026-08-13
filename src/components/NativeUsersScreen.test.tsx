@@ -1,3 +1,5 @@
+// [파일 역할] native 사용자 tab의 activation gate, refetch handle, 오류 inset과 iOS/Android pull 결과 안내 시점을 검증합니다.
+// [검증 경계] useUsersQuery와 Alert를 mock하므로 실제 Axios·Zod·TanStack Query cache·OS pull gesture는 확인하지 않습니다.
 import { createRef, type RefObject } from "react";
 import { Alert, Platform } from "react-native";
 import {
@@ -17,11 +19,13 @@ import {
 import type { User } from "@/src/types/user";
 
 jest.mock("@/src/api/users", () => ({
+  // 화면이 Query result를 소비하는 계약만 분리하기 위해 network/query 구현 전체를 대체합니다.
   useUsersQuery: jest.fn(),
 }));
 
 const mockedUseUsersQuery = jest.mocked(useUsersQuery);
 const users: User[] = [
+  // success/목록 branch에 필요한 최소 domain fixture입니다.
   {
     id: 1,
     name: "Leanne Graham",
@@ -32,6 +36,7 @@ const users: User[] = [
 function createUsersQuery(
   overrides: Partial<UseQueryResult<User[], Error>> = {},
 ): UseQueryResult<User[], Error> {
+  // 기본 success result 위에 test별 pending/error/refetch 값만 override합니다.
   return {
     data: users,
     error: null,
@@ -106,6 +111,7 @@ describe("NativeUsersScreen", () => {
     const { rerender } = await renderScreen(false, screenRef);
 
     await act(async () => {
+      // active=false로 mount된 직후에는 imperative 요청도 실제 Query refetch를 부르지 않아야 합니다.
       await screenRef.current?.refetchIfActivated(true);
     });
     expect(refetch).not.toHaveBeenCalled();
@@ -164,6 +170,7 @@ describe("NativeUsersScreen", () => {
   });
 
   it("iOS pull-to-refresh 결과는 손을 놓은 뒤 알린다", async () => {
+    // Platform 값만 교체하며 실제 UIKit gesture나 native RefreshControl을 구동하지는 않습니다.
     jest.replaceProperty(Platform, "OS", "ios");
     const alertSpy = jest.spyOn(Alert, "alert").mockImplementation();
     const refetch = jest.fn().mockResolvedValue({
@@ -176,6 +183,7 @@ describe("NativeUsersScreen", () => {
 
     const view = await renderScreen(true);
     const refreshableLists = view.container.queryAll(
+      // host component 이름 대신 production FlatList가 제공한 세 callback의 조합으로 대상 하나를 찾습니다.
       (instance) =>
         typeof instance.props.onRefresh === "function" &&
         typeof instance.props.onScrollBeginDrag === "function" &&
@@ -196,6 +204,7 @@ describe("NativeUsersScreen", () => {
     });
     expect(alertSpy).not.toHaveBeenCalled();
 
+    // drag 종료 callback 이후에만 pending 결과 안내가 전달되는 순서를 확인합니다.
     await fireEvent(list, "scrollEndDrag", {
       nativeEvent: { contentOffset: { x: 0, y: -80 } },
     });

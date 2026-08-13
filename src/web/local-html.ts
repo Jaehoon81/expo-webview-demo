@@ -1,3 +1,7 @@
+// [파일 역할] 첫 WebView에 주입되는 학습용 HTML·CSS·JavaScript와 8개 bridge action 버튼을 한 문서로 제공합니다.
+// [FLOW-05] bridge 흐름은 이 문서의 postMessage에서 시작해 Zod/dispatcher/기기 service를 거쳐 calledByNative callback으로 돌아옵니다.
+// [FLOW-05 / 1단계] `sendNative`가 uuid·action·선택 params를 JSON 문자열로 만들어 ReactNativeWebView에 전달합니다.
+// [주의] 아래 template literal 내부는 실제 WebView payload입니다. 설명용 TypeScript 주석을 문자열 안에 넣거나 escaping을 바꾸지 않습니다.
 export const LOCAL_DEMO_HTML = `<!doctype html>
 <html lang="ko">
   <head>
@@ -223,3 +227,4 @@ export const LOCAL_DEMO_HTML = `<!doctype html>
     </section>
   </body>
 </html>`;
+// [FLOW-05 / 8단계] payload 안의 calledByNative가 response를 parse해 error를 알리고 UUID 또는 최대 두 사진을 web DOM에 반영합니다.

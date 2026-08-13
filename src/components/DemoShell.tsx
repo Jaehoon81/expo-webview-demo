@@ -1,3 +1,7 @@
+// [파일 역할] 네 tab instance와 popup, bridge, deep link, platform navigation, 하단 바·network 상태를 연결하는 app orchestration shell입니다.
+// [FLOW-02] 탭 흐름은 영속 index를 읽고 네 화면을 모두 mount한 뒤 선택 전환 또는 현재 탭 재선택 reload로 이어집니다.
+// [FLOW-08] 하단 바 흐름은 scroll·bridge·keyboard 신호를 독립 보관하고 모두 표시를 허용할 때만 animation으로 보여줍니다.
+// [FLOW-09] network 흐름은 OS 연결 상태를 전역 배너로 알리되 WebView와 API의 실패·수동 retry 상태는 각 component가 소유합니다.
 import {
   useCallback,
   useEffect,
@@ -79,32 +83,40 @@ function clearBadgeSafely(): void {
 export function DemoShell() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  // [FLOW-09 / 1단계] expo-network Hook이 OS network state 변경을 구독해 shell을 다시 render합니다.
   const networkState = Network.useNetworkState();
+  // [FLOW-06 / 3단계] native-intent rewrite가 index query로 옮긴 canonical URL을 cold/warm 진입 모두 여기서 읽습니다.
   const { demoDeepLink } = useLocalSearchParams<{
     demoDeepLink?: string | string[];
   }>();
+  // [FLOW-02 / 1단계] hydration이 끝난 persisted index를 선택 상태의 기준으로 사용합니다.
   const selectedTabIndex = useAppStore((state) => state.selectedTabIndex);
   const setSelectedTabIndex = useAppStore(
     (state) => state.setSelectedTabIndex,
   );
+  // ref는 render를 일으키지 않고 이미 mount된 child의 reload/history API를 호출하기 위한 runtime handle입니다.
   const webTabRefs = useRef<(WebTabHandle | null)[]>([]);
   const nativeUsersRef = useRef<NativeUsersScreenHandle>(null);
   const popupRef = useRef<PopupWebViewHandle>(null);
   const lastBackPressRef = useRef(0);
   const bottomBarTranslateY = useRef(new Animated.Value(0)).current;
+  // bridge, scroll, keyboard는 서로 덮어쓰지 않도록 원인별 state로 분리합니다.
   const [bridgeBottomBarVisible, setBridgeBottomBarVisible] = useState(true);
   const [scrollBottomBarVisible, setScrollBottomBarVisible] = useState(true);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const [popupUrl, setPopupUrl] = useState<string | null>(null);
   const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
 
+  // [FLOW-08 / 3단계] 세 조건이 모두 true인 경우에만 하단 바가 실제 입력을 받고 보입니다.
   const bottomBarVisible =
     bridgeBottomBarVisible && scrollBottomBarVisible && !keyboardVisible;
   const bottomBarHiddenOffset = BOTTOM_TAB_BASE_HEIGHT + insets.bottom;
+  // [FLOW-09 / 2단계] 명시적인 NONE만 offline으로 표시하며 초기 UNKNOWN을 단절로 오판하지 않습니다.
   const networkOffline =
     networkState.type === Network.NetworkStateType.NONE;
 
   useEffect(() => {
+    // [FLOW-08 / 4단계] safe-area를 포함한 전체 높이만큼 native-driver translateY를 이동합니다.
     Animated.timing(bottomBarTranslateY, {
       toValue: bottomBarVisible ? 0 : bottomBarHiddenOffset,
       duration: 180,
@@ -117,6 +129,7 @@ export function DemoShell() {
   ]);
 
   useEffect(() => {
+    // iOS는 keyboard animation 전 event, Android는 실제 표시 후 event를 사용해 platform 제공 시점에 맞춥니다.
     const showEvent = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
     const hideEvent = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
     const showSubscription = Keyboard.addListener(showEvent, () => {
@@ -127,12 +140,14 @@ export function DemoShell() {
     });
 
     return () => {
+      // DemoShell unmount 뒤 listener가 state를 갱신하지 않도록 두 platform event subscription을 정리합니다.
       showSubscription.remove();
       hideSubscription.remove();
     };
   }, []);
 
   useEffect(() => {
+    // notification handler는 service가 process에서 한 번만 구성하고 event subscription은 DemoShell mount 수명을 따릅니다.
     configureNotificationHandler();
     const unsubscribeNotifications = subscribeToNotificationEvents();
     clearBadgeSafely();
@@ -154,12 +169,14 @@ export function DemoShell() {
 
   const applyDeepLink = useCallback(
     ({ tabIndex, targetUrl }: DemoDeepLink) => {
+      // [FLOW-06 / 5단계] 검증된 target tab을 선택하고 URL이 있으면 이미 mount된 WebView history에 load합니다.
       setSelectedTabIndex(tabIndex);
       setScrollBottomBarVisible(true);
 
       if (targetUrl && tabIndex < 3) {
         webTabRefs.current[tabIndex]?.loadUrl(targetUrl);
       } else if (tabIndex === 3) {
+        // native tab target은 과거에 활성화된 적이 없어도 강제 조회할 수 있도록 일반 refetch가 아닌 조건부 handle을 사용합니다.
         void nativeUsersRef.current?.refetchIfActivated(true);
       }
     },
@@ -195,15 +212,18 @@ export function DemoShell() {
     }
 
     handleDeepLinkUrl(incomingUrl);
+    // 같은 query가 다음 render에서 다시 적용되지 않도록 처리 직후 route param을 제거합니다.
     router.setParams({ demoDeepLink: undefined });
   }, [demoDeepLink, handleDeepLinkUrl, router]);
 
   const openExternalUrl = useCallback((url: string) => {
+    // [FLOW-06 / 7단계] app이 처리하지 않는 scheme은 OS에 위임하고 등록 앱 부재/rejection은 공통 안내로 끝냅니다.
     void Linking.openURL(url).catch(showLinkingError);
   }, []);
 
   const handleNavigationRequest = useCallback(
     (url: string): boolean => {
+      // [FLOW-03 / 4단계] 순수 URL decision을 WebView 허용, 차단 안내, app deep link, OS 외부 앱 동작으로 실행합니다.
       const decision = classifyNavigationUrl(url);
 
       switch (decision.type) {
@@ -230,8 +250,10 @@ export function DemoShell() {
 
   const handleOpenWindow = useCallback(
     (sourceTabIndex: TabIndex, url: string) => {
+      // [FLOW-04 / 1단계] source WebView의 window.open target과 tab index를 받아 새 창 처리 주체를 고릅니다.
       const decision = classifyPopupUrl(url);
 
+      // [FLOW-04 / 3단계] 알려진 parent URL은 source history, 외부 scheme/host는 OS, 나머지 HTTPS는 modal state로 보냅니다.
       if (decision.type === "parent") {
         webTabRefs.current[sourceTabIndex]?.loadUrl(decision.url);
         return;
@@ -243,6 +265,7 @@ export function DemoShell() {
       }
 
       setPopupUrl(decision.url);
+      // popup이 열린 동안 겹치는 하단 tab 입력을 막기 위해 scroll visibility도 숨깁니다.
       setScrollBottomBarVisible(false);
     },
     [openExternalUrl],
@@ -267,6 +290,7 @@ export function DemoShell() {
   }, []);
 
   const setBottomNaviVisible = useCallback((visible: boolean) => {
+    // [FLOW-08 / 관련 코드] bridge의 명시적 show는 이전 scroll hide도 해제하지만 keyboard hide 조건을 우회하지 않습니다.
     setBridgeBottomBarVisible(visible);
     if (visible) {
       setScrollBottomBarVisible(true);
@@ -275,11 +299,13 @@ export function DemoShell() {
 
   const handleBridgeMessage = useCallback(
     (sourceTabIndex: TabIndex, message: string): Promise<BridgeResponse> =>
+      // [FLOW-05 / 3단계] shell이 현재 refs·state setter·Expo service를 dependency로 묶어 순수 dispatcher에 주입합니다.
       dispatchBridgeMessage(message, {
         getDeviceUUID: getOrCreateDeviceId,
         showToastMessage,
         showNotiMessage: showDemoNotification,
         reloadOtherTabs: async () => {
+          // 요청을 보낸 WebView를 제외한 두 WebView는 초기 source로, 활성화 이력이 있는 native tab은 Query refetch로 되돌립니다.
           for (let index = 0; index < 3; index += 1) {
             if (index !== sourceTabIndex) {
               webTabRefs.current[index]?.reloadInitial();
@@ -288,6 +314,7 @@ export function DemoShell() {
           await nativeUsersRef.current?.refetchIfActivated(true);
         },
         goToAnotherTab: async (targetTab: TabTag, targetUrl: string) => {
+          // schema를 통과한 tag라도 변환 결과와 HTTPS URL을 실행 직전에 다시 확인해 dependency 경계를 지킵니다.
           const targetIndex = tabTagToIndex(targetTab);
           const normalizedUrl = normalizeHttpsUrl(targetUrl);
 
@@ -315,6 +342,7 @@ export function DemoShell() {
       setScrollBottomBarVisible(true);
 
       if (index === selectedTabIndex) {
+        // [FLOW-02 / 5단계] 현재 tab 재선택은 WebView 최초 source reset 또는 native Query 강제 refetch라는 명시적 refresh 동작입니다.
         if (index < 3) {
           webTabRefs.current[index]?.reloadInitial();
         } else {
@@ -323,6 +351,7 @@ export function DemoShell() {
         return;
       }
 
+      // [FLOW-02 / 4단계] 다른 tab 선택은 index만 persist store에 기록하며 child instance 자체는 unmount하지 않습니다.
       setSelectedTabIndex(index);
     },
     [selectedTabIndex, setSelectedTabIndex],
@@ -336,6 +365,7 @@ export function DemoShell() {
     const subscription = BackHandler.addEventListener(
       "hardwareBackPress",
       () => {
+        // Android back 우선순위는 popup history/close → 현재 WebView history → 2초 이중 입력 종료입니다.
         if (popupUrl !== null) {
           if (!popupRef.current?.goBack()) {
             closePopup();
@@ -411,6 +441,7 @@ export function DemoShell() {
       ) : null}
 
       <View style={styles.content}>
+        {/* [FLOW-02 / 2단계] 세 WebTab과 NativeUsersScreen을 항상 같은 tree에 두고 active prop으로 표시·입력만 전환합니다. */}
         {TAB_DEFINITIONS.slice(0, 3).map((tab) => (
           <WebTab
             active={selectedTabIndex === tab.index}
@@ -429,6 +460,7 @@ export function DemoShell() {
               handleOpenWindow(tab.index, url);
             }}
             onScrollDirection={(direction) => {
+              // [FLOW-08 / 관련 코드] 활성 child가 올린 방향만 scroll visibility state로 변환합니다.
               setScrollBottomBarVisible(direction === "up");
             }}
             ref={(value) => {
@@ -448,6 +480,7 @@ export function DemoShell() {
         />
       </View>
 
+      {/* opacity가 아니라 화면 밖 translation을 쓰므로 숨김 중에는 pointerEvents도 함께 차단합니다. */}
       <Animated.View
         pointerEvents={bottomBarVisible ? "auto" : "none"}
         style={[
