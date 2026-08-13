@@ -312,3 +312,15 @@ Android Expo Go와 development build 결과는 이전 절의 이력으로 유지
 - iOS internal Preview Build `681c24bd-c90e-4fc3-ba47-b8ff6efb8840`을 iPhone 11에 설치해 같은 오프라인 항목과 네트워크 복원 뒤 정상 load·scroll을 모두 통과했다.
 
 상세 원인, build와 iPhone 결과는 [iOS EAS Preview Build와 실기기 전체 흐름 검증 완료 문서](./2026-08-12-ios-eas-preview-build-and-device-validation.md) 11절을 따른다. 4단계의 누락 항목까지 보완됐고 다음 미완료 제품 단계는 5단계다. 이번 문서·GitHub closeout은 5단계를 시작하는 것이 아니며 사용자의 별도 시작 지시를 기다린다.
+
+## 12. 2026-08-13 5단계 시작과 최종 인계
+
+사용자가 5단계 시작, `agents-md-improver` 감사 제안 반영과 새 최종 handoff 작성을 승인했다. 현재 작업은 완료된 Android Expo Go·development build·iOS Preview Build와 오프라인 실기기 검증을 반복하지 않고 source 주석·architecture·학습 자료와 최종 정합성에 한정한다.
+
+- `AGENTS.md`는 실제 source·config·scripts·tests·`.gitignore` 감사와 사전 품질 보고서·수정 제안 승인을 거쳐 한글 project 지침으로 보완한다.
+- 현재 production source 전체에 파일 책임과 canonical `FLOW-01`~`FLOW-09`를 연결하고 test에는 mock 검증 경계를 명시한다.
+- 새 architecture, source commentary와 대화형 learning guide는 [2026-08-13 5단계 최종 인계](./2026-08-13-step-5-final-handoff.md)를 기준으로 한다.
+- 이번 주석·문서 작업은 production 실행식, package·app/EAS config와 native build 입력을 변경하지 않으며 build·설치·실기기·EAS·서명 작업을 수행하지 않는다.
+- Commit/push와 원격 일치 확인은 변경·검증 결과를 먼저 제시한 뒤 사용자의 별도 승인 대상으로 유지한다.
+
+따라서 이 문서의 Android 결과는 과거 완료 증거로 그대로 유효하며, 최신 제품 단계 상태는 구현 계획서 16절과 5단계 최종 인계를 우선한다.

@@ -4,7 +4,7 @@
 - 대상 프로젝트: `my-webview-app`
 - 대상 플랫폼: Android, iOS
 - 기준 런타임: Expo SDK 54 / Expo Go 우선
-- 상태: 구현 승인됨
+- 상태: 1~4단계와 오프라인 후속 검증 완료, 5단계 진행 중
 
 ## 1. 목표와 기준
 
@@ -325,7 +325,7 @@ Android 표적 재검증은 LG `LM-V500N`, Android 12(API 31), Expo Go `54.0.8`�
 | 2 | Public GitHub 저장소 생성과 의미별 초기 commit/push | 완료 | 공개 전 민감 정보 감사, 사용자의 빈 저장소 생성 | 단계·기능·의미별 commit과 1차 push, GitHub 결과 문서 갱신 commit과 2차 push, local/remote 일치 확인 |
 | 3 | Android development build와 외부 custom scheme 검증 | 완료 | 2단계 완료, 사용자의 명시적 시작, build 방식·서명 범위 확인 | [2026-08-11 완료 문서](./2026-08-11-android-development-build-and-custom-scheme-validation.md)의 cold/warm custom scheme, 표적 회귀와 자동 검사 |
 | 4 | iOS 실기기 전체 흐름 검증 | 완료 | EAS remote iOS build와 iPhone 11 설치·검증 환경 준비 | [2026-08-12 완료 문서](./2026-08-12-ios-eas-preview-build-and-device-validation.md)의 기능 동등성, iOS 고유 탐색·권한·lifecycle, Android 표적 회귀와 2026-08-13 오프라인 오류 복구 후속 검증 |
-| 5 | 최종 인계 문서·source 주석·학습서 정리 | 대기 | 3~4단계 결과 확정 완료, 사용자의 명시적 시작 | 필수 문서와 주석 완성, 전체 검증, 후속 commit/push 및 원격 일치 확인 |
+| 5 | 최종 인계 문서·source 주석·학습서 정리 | 진행 중 | 3~4단계 결과 확정 완료, 사용자의 명시적 시작 | 필수 문서와 주석 완성, 전체 검증, 후속 commit/push 및 원격 일치 확인 |
 
 ### 2단계: Public GitHub 저장소와 초기 이력
 
@@ -457,3 +457,49 @@ docs/2026-08-10-android-expo-go-validation-completion.md의 최신 인계 절을
 - source/test는 `073c2cad87ccd2b8dc6d91dd604fa631b4829fff`로 문서와 분리했다. package·native config·credential·외부 서비스 설정은 변경하지 않았다.
 
 4단계의 누락된 network 실기 항목까지 보완됐고 차단 요소는 없다. 다음 미완료 제품 단계는 5단계 `최종 인계 문서·source 주석·학습서 정리`이며, 이번 후속 문서와 GitHub 원격 일치 확인을 마친 뒤에도 사용자의 별도 시작 지시를 기다린다.
+
+## 16. 2026-08-13 5단계 최종 인계 정리 진행
+
+사용자가 5단계 시작, `agents-md-improver` 제안 반영과 `docs/2026-08-13-step-5-final-handoff.md` 생성을 승인했다. 시작 전 local `master`, `HEAD`, `origin/master`, live remote `master`는 모두 `65f5b2d89850b9c72fca593deec579da3c39eae0`로 일치했고 worktree는 clean, Metro `8081`은 닫혀 있었다.
+
+### 16.1 반영 범위
+
+- 참고 앱 `D:\Development\ReactNative\Workspaces\my-sample-app`의 학습 문서와 유지관리 대상 화면·공용 TypeScript·test·Kotlin·Swift·module/tool config 37개 파일을 전체 대조했다.
+- `agents-md-improver` 사전 감사의 `33/100 (D)` 보고서와 수정 제안을 사용자 승인 뒤 반영했다. 한글 `AGENTS.md`는 실제 command, architecture invariant, comment/FLOW, test, device/build, generated·secret와 Git 승인 경계를 연결했고 승인 후 재감사 기준 `92/100 (A)`로 개선했다. Repository에 없는 CI/PR 정책은 추측으로 만들지 않았다.
+- `app/`과 `src/`의 production source 28개 모두에 `[파일 역할]`을 추가하고 `FLOW-01`~`FLOW-09`의 canonical 9개 흐름·56개 단계를 연결했다.
+- test 15개 모두에 `[파일 역할]`과 `[검증 경계]`를 추가하고 WebView·Query·SecureStore·Alert·Platform mock이 증명하지 않는 실제 native/runtime 범위를 표시했다.
+- `eslint.config.js`, `jest.setup.ts`에 tooling 책임과 mock 경계를 설명했다. `LOCAL_DEMO_HTML` template literal 내부 payload와 JSON config 값은 변경하지 않았다.
+- 한글 [내부 구조와 동작](./architecture-internals.md), [소스 주석 읽기 안내서](./source-commentary-guide.md), [대화형 구현 학습서](./learning-guide.md)를 새로 작성했다.
+- 학습서는 실제 source 흐름 8개 대단원·32개 서브 스텝으로 구성하고, 요청에 따라 범용 문법 백과, 독립적인 자동화/실기기 반복 장과 복습 mutation 실습을 제외했다. 사용자와 source 확인·질문을 아직 시작하지 않았으므로 학습 완료로 판정하지 않는다.
+- README와 Android Expo Go, Android development build, iOS Preview Build 문서에는 과거 결과를 보존하며 최신 5단계 인계 link와 비반복 경계를 추가했다.
+
+### 16.2 검증 결과
+
+| 검사 | 결과 |
+|---|---|
+| Source 실행문 diff 감사 | `app/`, `src/`, test와 tooling config에서 추가·삭제된 non-comment line 각각 0 |
+| Script syntax equivalence | 변경된 TypeScript/JavaScript 45/45가 주석·빈 JSX 주석 container 제외 시 동일 |
+| FLOW 감사 | canonical `01`~`09` 각 1회, 단계 56개 각 1회, 중복 0 |
+| Source/test coverage | production 28/28 `[파일 역할]`, test 15/15 `[파일 역할]`·`[검증 경계]` |
+| Jest | 15 suites·50 tests 통과 |
+| TypeScript | `npm run typecheck` 통과 |
+| ESLint | `npm run lint` 통과 |
+| Expo dependency | `npx expo install --check` 통과 |
+| Expo public config | `npx expo config --type public` 통과 |
+| Expo Doctor | 18/18 통과 |
+| 공개 민감정보 | high-signal secret content와 sensitive filename 후보 각각 0 |
+| Generated ignore | `.expo`, `/android`, `/ios`, `node_modules`, signing 확장자와 `expo-env.d.ts` ignore 확인 |
+| Markdown 감사 | 전체 13개 파일의 깨진 local link·홀수 code fence·heading jump·trailing whitespace 각각 0 |
+| Learning guide 구성 | 32개 서브 스텝, 제외 요청한 독립 반복 장 제목 0 |
+
+Markdown 감사와 최종 `git diff --check`의 상세 결과는 [5단계 최종 인계](./2026-08-13-step-5-final-handoff.md)의 최신 검증 표를 우선한다.
+
+### 16.3 제외와 남은 Git 경계
+
+- Production 실행식, `package.json`, lockfile, `app.json`, `eas.json`, scheme, package/bundle identifier와 native config는 변경하지 않았다.
+- 완료된 Android/iOS build·설치·실기기·EAS·서명 검증을 반복하지 않았고 새 external service 변경도 없다.
+- 5단계 본문 산출물과 자동 감사에는 기술적 차단 요소가 없다.
+- Commit/push는 별도 승인 전 수행하지 않는다. 현재 local `HEAD`, tracking ref와 remote는 시작 SHA를 유지하며 worktree의 5단계 변경은 미commit 상태다.
+- 권장 경계는 source/test/tooling 주석과 문서·AGENTS/README/계획·handoff를 분리하고, 첫 push parity 확인 뒤 정확한 commit SHA와 최종 clean/remote 상태를 closeout 문서 commit으로 남기는 순서다.
+
+따라서 5단계 상태는 **본문 작성과 자동 검증 완료, GitHub closeout 별도 승인 대기**다. Commit/push와 최종 remote parity가 끝나기 전에는 단계 전체를 완료로 바꾸지 않는다.

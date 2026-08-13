@@ -242,3 +242,9 @@ source/test/config는 다음 의미 단위로 분리했다.
 - EAS의 `cli.appVersionSource` 향후 필수화와 `ios.infoPlist.ITSAppUsesNonExemptEncryption` 미설정 경고는 이번 ad hoc Preview Build를 막지 않았다. App Store/TestFlight 범위에서 실제 정책을 정하기 전에는 추측으로 config를 추가하지 않는다.
 - Android용 새 APK는 만들지 않았고 Metro runtime에서 영향 범위만 재검증한 뒤 Metro `8081`을 종료했다.
 - 4단계의 누락된 network 실기 항목까지 보완됐으며 차단 요소는 없다. 다음 미완료 제품 단계는 여전히 5단계이고, 이 문서·GitHub closeout 뒤 사용자의 별도 시작 지시를 기다린다.
+
+## 12. 2026-08-13 5단계 시작과 문서 인계
+
+사용자가 5단계 `최종 인계 문서·source 주석·학습서 정리`를 승인했다. 새 작업은 한글 architecture, canonical FLOW source 주석, 독립 source 안내서와 대화형 학습 자료 정리에 한정하며 iOS production 실행식, `app.json`, `eas.json`, remote credential과 설치 Preview Build를 변경하지 않는다.
+
+따라서 EAS build·설치·iPhone 전체 흐름과 11절 오프라인 후속 검증은 반복하지 않는다. 5단계 산출물·자동 검사·공개 감사와 Git closeout의 최신 상태는 [2026-08-13 5단계 최종 인계](./2026-08-13-step-5-final-handoff.md)를 우선한다. App Store Connect, TestFlight, production signing, local Xcode와 기기 matrix는 계속 제외 범위다.

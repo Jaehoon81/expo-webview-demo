@@ -198,3 +198,9 @@ npx --no-install expo start --dev-client --localhost --port 8081
 이번 변경은 JavaScript source/test에 한정돼 새 Android APK를 생성하거나 package·manifest·scheme·native build 설정을 변경하지 않았다. Android 검증 뒤 Metro `8081`을 종료했고, iOS는 별도 EAS internal Preview Build `681c24bd-c90e-4fc3-ba47-b8ff6efb8840`으로 실기기 확인을 마쳤다. 상세 원인과 최신 결과는 [iOS 4단계 완료 문서](./2026-08-12-ios-eas-preview-build-and-device-validation.md) 11절을 따른다.
 
 source/test는 `073c2cad87ccd2b8dc6d91dd604fa631b4829fff`로 문서와 분리했다. 3단계 development build와 custom scheme 판정은 그대로 유지되며, 다음 미완료 제품 단계는 여전히 5단계다.
+
+### 8.3 2026-08-13 5단계 시작 갱신
+
+이후 사용자가 5단계 최종 인계 문서·source 주석·학습서 정리를 승인했다. 이번 단계는 production 실행식, scheme, package, native config와 launcher-free debug build를 변경하지 않으므로 3단계 build·설치·custom scheme 실기기 검증을 반복하지 않는다.
+
+현재 architecture와 source FLOW, 자동 검사, 공개 감사, Git closeout 상태는 [2026-08-13 5단계 최종 인계](./2026-08-13-step-5-final-handoff.md)를 따른다. Commit/push는 변경 결과 검토 뒤 별도 승인 대상으로 남긴다.

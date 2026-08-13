@@ -53,6 +53,7 @@ npm test -- --runInBand
 npm run typecheck
 npm run lint
 npx expo install --check
+npx expo config --type public
 npx expo-doctor
 ```
 
@@ -70,7 +71,10 @@ npx expo-doctor
 | `src/store/` | 마지막 선택 탭 영속 상태 |
 | `src/web/` | 메인 WebView에 전달하는 로컬 HTML |
 | `app.json`, `eas.json` | app identifier와 EAS internal Preview Build 설정 |
-| `docs/` | 구현 계획, 실기기 검증과 단계별 handoff |
+| `docs/architecture-internals.md` | 현재 source의 구조, 상태 수명과 platform 경계 |
+| `docs/source-commentary-guide.md` | canonical FLOW를 따라 혼자 source를 읽는 안내 |
+| `docs/learning-guide.md` | 실제 source와 대조하는 대화형 학습 기준 자료 |
+| 그 외 `docs/` | 구현 계획, 실기기 검증과 단계별 handoff |
 
 ## 검증 상태
 
@@ -98,5 +102,9 @@ Android Expo Go의 상세 환경과 단계별 판정은 [Android Expo Go 검증 
 - [2026-08-10 Public GitHub 저장소와 초기 push handoff](./docs/2026-08-10-github-repository-and-initial-push-handoff.md)
 - [2026-08-11 Android development build와 외부 custom scheme 검증 완료](./docs/2026-08-11-android-development-build-and-custom-scheme-validation.md)
 - [2026-08-12 iOS EAS Preview Build와 실기기 전체 흐름 검증 완료](./docs/2026-08-12-ios-eas-preview-build-and-device-validation.md)
+- [내부 구조와 동작](./docs/architecture-internals.md)
+- [소스 주석 읽기 안내서](./docs/source-commentary-guide.md)
+- [대화형 구현 학습서](./docs/learning-guide.md)
+- [2026-08-13 5단계 최종 인계](./docs/2026-08-13-step-5-final-handoff.md)
 
-최종 source 주석, 내부 architecture 문서와 학습서는 계획서의 5단계에서 보완한다.
+Production source에는 파일 책임·이유·주의·검증 경계와 `FLOW-01`~`FLOW-09` canonical 주석이 연결되어 있다. Test 파일은 mock이 확인하는 범위와 실제 native/runtime 경계를 첫 주석에서 구분한다.
