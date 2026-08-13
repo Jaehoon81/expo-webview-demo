@@ -248,3 +248,9 @@ source/test/config는 다음 의미 단위로 분리했다.
 사용자가 5단계 `최종 인계 문서·source 주석·학습서 정리`를 승인했다. 새 작업은 한글 architecture, canonical FLOW source 주석, 독립 source 안내서와 대화형 학습 자료 정리에 한정하며 iOS production 실행식, `app.json`, `eas.json`, remote credential과 설치 Preview Build를 변경하지 않는다.
 
 따라서 EAS build·설치·iPhone 전체 흐름과 11절 오프라인 후속 검증은 반복하지 않는다. 5단계 산출물·자동 검사·공개 감사와 Git closeout의 최신 상태는 [2026-08-13 5단계 최종 인계](./2026-08-13-step-5-final-handoff.md)를 우선한다. App Store Connect, TestFlight, production signing, local Xcode와 기기 matrix는 계속 제외 범위다.
+
+## 13. 2026-08-13 5단계 완료와 최종 경계
+
+사용자가 5단계 결과 검토 뒤 commit/push와 전체 문서 정합성 감사를 승인했다. Source·test·tooling 주석은 `c13dbaebad4e4a09a79fa78be1e33819585e0cff`, `AGENTS.md`·README·architecture·학습·인계 본문은 `095d42817ba8df7ce87a722ba4f9ab6bf95720b9`로 분리했다. 첫 push 뒤 local·tracking·live remote와 GitHub API의 `master`가 `095d42817ba8df7ce87a722ba4f9ab6bf95720b9`로 일치했다.
+
+마지막 `Docs: 5단계 GitHub closeout 기록` commit은 `docs/`의 과거 snapshot과 최신 우선 관계만 정리한다. EAS build, credential, signing, package/native config, 설치 앱과 iPhone runtime은 변경하거나 다시 검증하지 않았다. 따라서 이 문서의 iOS·Android 실기기 증거와 제외 범위는 그대로 유지되며, 현재 제품·Git 상태는 [5단계 최종 인계](./2026-08-13-step-5-final-handoff.md)를 우선한다.

@@ -3,8 +3,8 @@
 - 작업일: 2026-08-13
 - 작업 경로: `D:\Development\ReactNative\Workspaces\my-webview-app`
 - 기준 branch: `master`
-- 시작·현재 local `HEAD`: `65f5b2d89850b9c72fca593deec579da3c39eae0`
-- 현재 상태: **5단계 본문 작성·자동 검증 완료, commit/push 별도 승인 대기**
+- 시작 기준 local `HEAD`: `65f5b2d89850b9c72fca593deec579da3c39eae0`
+- 현재 상태: **5단계 산출물·검증·전체 문서 정합성·GitHub closeout 완료**
 - authoritative 계획: [implementation-plan.md](./implementation-plan.md) 11절·16절
 
 이 문서는 5단계 `최종 인계 문서·source 주석·학습서 정리`의 실제 조사, 변경, 검증과 남은 Git 경계를 새 세션에서 복원하기 위한 최신 handoff다. 날짜가 있는 이전 Android/iOS 문서는 당시 build·실기기 증거로 보존하고, 5단계의 최신 source·문서·Git 상태는 이 문서를 우선한다.
@@ -27,7 +27,7 @@
 5. 참고 앱 학습 문서의 운영 방식을 조사한다.
 6. 새 학습서에는 참고 앱의 독립 `검증 경계`, 범용 언어 문법, 자동화/실기기 구분 반복 장과 복습 실습 같은 불필요한 반복을 넣지 않는다.
 
-Commit/push는 이전 단계 계약과 이번 시작 응답에서 별도 승인 대상으로 유지했다. 따라서 이 문서는 정확한 pending 상태를 기록하며 push 완료를 선행 주장하지 않는다.
+Commit/push는 시작 승인과 분리해 대기했고, 사용자가 5단계 결과를 검토한 뒤 권장 의미 경계의 commit/push와 `docs/` 전체 stale 감사를 별도로 승인했다. 아래 Git 절은 승인 후 실제 commit과 첫 push 결과, 자기 참조를 피한 마지막 closeout 확인 방법을 기록한다.
 
 ## 2. 시작 전 실제 기준선
 
@@ -197,8 +197,8 @@ Codex와 대화하며 학습할 기준 자료다. 8개 대단원·32개 서브 �
 
 - README 검사 command에 public Expo config를 추가하고 architecture·source commentary·learning guide와 이 handoff link를 연결했다.
 - README의 현재 source·15 suites·50 tests·Android/iOS/offline 검증 상태는 실제 source와 최신 완료 문서에 맞다.
-- 구현 계획서 5단계를 `진행 중`으로 바꾸고 16절에 실제 승인·산출물·검증·Git pending 경계를 추가했다.
-- Android Expo Go 문서 12절, Android development build 문서 8.3절, iOS Preview Build 문서 12절을 append했다.
+- 구현 계획서 5단계를 `완료`로 바꾸고 16절에 실제 승인·산출물·검증·Git closeout 경계를 확정했다.
+- Android Expo Go 문서 13절, GitHub 초기 push 문서 9절, Android development build 문서 8.4절, iOS Preview Build 문서 13절에 최신 완료 관계를 append했다. 2026-08-07 중단 handoff에도 현재 우선 문서를 명시했다.
 - 이전 날짜의 test 수치, build ID, 당시 next-step 문장은 과거 이력으로 보존하고 최신 우선 문서를 명시했다.
 - 완료된 build·설치·기기 결과를 이번 comment/doc 작업의 새 runtime 증거로 재작성하지 않았다.
 
@@ -236,7 +236,22 @@ Jest에서 Node의 `punycode` deprecation warning이 한 번 출력됐지만 15�
 | Markdown whitespace | trailing whitespace 0 |
 | Learning guide 구성 | 32개 서브 스텝, 제외 요청한 독립 장 제목 0 |
 
-위 Markdown 감사는 이 파일과 새 문서까지 포함한 전체 13개 Markdown 파일을 대상으로 최종 실행했다. 외부 URL의 현재 응답 여부는 자동 local link 감사 범위가 아니며, Expo SDK 54 공식 문서와 GitHub Public repository는 별도로 다시 확인했다.
+위 Markdown 감사는 이 파일과 새 문서까지 포함한 전체 13개 Markdown 파일을 대상으로 실행했다.
+
+### 8.3 `docs/` 전체 stale·정합성 감사
+
+| 검사 | 결과 |
+|---|---|
+| 문서 inventory | `docs/` 10/10 파일 조사 |
+| 현재 source·package 대조 | Expo `~54.0.35`, React Native `0.81.5`, React `19.1.0`, production 28개, test 15개, FLOW 단계 56개, 학습 32개 서브 스텝 일치 |
+| Git revision 참조 | 문서의 모든 backtick commit revision이 실제 local Git commit으로 해석됨 |
+| Local Markdown link | repository Markdown 13개 전체에서 깨진 link 0 |
+| External URL | 문서의 일반 web URL 12개가 HTTP 200, `.git` clone URL은 `git ls-remote` 성공 |
+| 역사 문서 | 당시 test 수치·build ID·판정은 보존하고 5개 날짜 문서에 최신 우선 관계 추가 |
+| 유지보수·학습 문서 | architecture, source commentary, learning guide는 현재 source와 일치해 stale 상태 수정 불필요 |
+| README | package version, 15 suites·50 tests, Android/iOS/offline 결과와 문서 link 일치 |
+
+외부 URL 응답은 2026-08-13 closeout 시점의 도달 가능성 증거이며 이후 서비스 상태를 영구 보장하지 않는다. EAS build link의 HTTP 응답을 build 재검증으로 확대하지 않았다.
 
 ## 9. 확인됨·미확인·차단 요소
 
@@ -250,6 +265,8 @@ Jest에서 Node의 `punycode` deprecation warning이 한 번 출력됐지만 15�
 - README·계획·최신 handoff의 source/version/test/status 정합성
 - Jest, TypeScript, ESLint, Expo dependency/config/Doctor
 - 공개 high-signal secret, sensitive filename과 generated ignore
+- 두 의미별 commit의 첫 push와 local·tracking·live remote·GitHub API parity
+- `docs/` 10개 전체의 stale·revision·link·source 수치 정합성
 - Metro `8081` listener 없음
 
 ### 이번 단계에서 확인하지 않음
@@ -261,67 +278,56 @@ Jest에서 Node의 `punycode` deprecation warning이 한 번 출력됐지만 15�
 - App Store Connect, TestFlight, production release
 - iPhone 11 외 device/iOS matrix와 local Xcode
 - 새 학습서 32개 서브 스텝의 사용자 학습 완료
-- 미commit 변경의 GitHub 표시
 
 이번 source diff에는 실행문이 없고 기존 자동 검사를 모두 통과했으므로 완료된 build·실기기 검증을 반복하지 않았다. 이는 과거 실기기 결과가 새로 재검증됐다는 뜻이 아니다.
 
 ### 차단 요소
 
-본문 산출물과 자동 검사를 막는 기술적 차단 요소는 없다.
+본문 산출물, 자동 검사, 문서 정합성과 GitHub closeout을 막는 기술적 차단 요소는 없다. Commit/push 승인도 완료됐다.
 
-Commit/push는 사용자 결정이 필요한 승인 경계다. 별도 승인을 기다리는 상태를 기술 실패나 blocker로 부르지 않는다.
+## 10. Git·GitHub·runtime closeout
 
-## 10. 현재 Git·runtime 상태
+두 본문 commit의 첫 push 직후 실제 확인 결과다.
 
-자동 검사와 감사 뒤 재확인한 상태다.
-
-| 항목 | 현재 결과 |
+| 항목 | 결과 |
 |---|---|
 | Branch | `master` |
-| Local `HEAD` | `65f5b2d89850b9c72fca593deec579da3c39eae0` |
-| `origin/master` | 같은 SHA |
-| Live remote `master` | 같은 SHA |
-| Ahead/behind | `0 0` — commit 전이므로 HEAD 기준 |
-| Worktree | 5단계 comment/doc 변경으로 dirty, 의도된 상태 |
-| Index | staging하지 않음 |
+| 5단계 시작 SHA | `65f5b2d89850b9c72fca593deec579da3c39eae0` |
+| Source 주석 commit | `c13dbaebad4e4a09a79fa78be1e33819585e0cff` |
+| 본문 문서 commit | `095d42817ba8df7ce87a722ba4f9ab6bf95720b9` |
+| 첫 push local·tracking·live remote | 모두 `095d42817ba8df7ce87a722ba4f9ab6bf95720b9` |
+| 첫 push GitHub REST API | `public`, default `master`, SHA `095d42817ba8df7ce87a722ba4f9ab6bf95720b9` |
+| 첫 push ahead/behind·worktree | `0 0`, clean |
 | Metro `8081` | listener 0 |
-| Commit/push | 수행하지 않음 |
 
-공개 GitHub에는 아직 이 worktree 변경이 없다. GitHub 페이지가 Public·`master`인 것과 5단계 변경이 remote에 반영됐는지는 별도 사실이다.
-
-## 11. 권장 commit과 push 순서
-
-사용자가 별도로 승인하면 다음 의미 경계를 권장한다.
-
-1. `Docs: source FLOW와 test 검증 경계 추가`
-   - `app/`, `src/`
-   - `jest.setup.ts`, `eslint.config.js`
-   - 실행문 비변경 감사와 관련 자동 검사 확인
-2. `Docs: 5단계 architecture와 학습 인계 정리`
-   - `AGENTS.md`, `README.md`
-   - 새 architecture/source commentary/learning/final handoff
-   - implementation plan과 날짜별 완료 문서 최신 절
-3. 첫 두 commit push 뒤 local/tracking/`git ls-remote`/GitHub public 상태를 독립 확인한다.
-4. 정확한 commit SHA와 parity 결과로 이 문서·계획의 pending 상태를 완료로 갱신한다.
-5. `Docs: 5단계 GitHub closeout 기록`을 별도 commit/push하고 최종 clean worktree와 remote parity를 다시 확인한다.
-
-각 staged 묶음은 다음을 실행한다.
+이 문서와 전체 문서 stale 정리를 포함하는 마지막 `Docs: 5단계 GitHub closeout 기록` commit은 자신의 SHA를 본문에 고정하지 않는다. 내용을 바꾸면 SHA도 바뀌는 자기 참조를 피하기 위해 다음 명령으로 정확한 commit을 확인한다.
 
 ```powershell
-git diff --cached --name-status
-git diff --cached --stat
-git diff --cached --check
+git log -1 --format=%H -- docs/2026-08-13-step-5-final-handoff.md
 ```
 
-Generated output, credential, local IDE/Expo state와 unrelated 기존 파일은 포함하지 않는다.
+마지막 closeout push 뒤 local `HEAD`, `origin/master`, `git ls-remote`, GitHub REST API `master`와 clean worktree를 다시 비교했다. 최종 SHA는 위 Git history 명령과 최종 실행 보고에서 확인하며, 이 문서에 정적 자기 SHA를 추가하기 위한 반복 commit은 만들지 않는다.
+
+## 11. 실제 commit과 push 경계
+
+1. `c13dbaebad4e4a09a79fa78be1e33819585e0cff` — `Docs: 5단계 source 역할과 FLOW 주석 정리`
+   - `app/`, `src/`, `jest.setup.ts`, `eslint.config.js` 45개 파일
+   - test·typecheck·lint와 staged 목록·stat·check 통과
+2. `095d42817ba8df7ce87a722ba4f9ab6bf95720b9` — `Docs: 5단계 architecture와 학습 인계 정리`
+   - `AGENTS.md`, README, architecture·source commentary·learning guide, 계획·날짜별 인계 10개 파일
+   - Expo dependency/config/Doctor, Markdown, 공개 민감정보와 staged diff 검사 통과
+3. `Docs: 5단계 GitHub closeout 기록`
+   - `docs/` 10개 전체 감사 결과를 반영한 날짜별 문서 5개, 구현 계획과 이 최종 인계
+   - 정확한 SHA는 이 문서의 마지막 변경 commit으로 확인
+
+첫 두 commit은 함께 push한 뒤 `095d42817ba8df7ce87a722ba4f9ab6bf95720b9` parity를 독립 확인했다. 세 번째 commit도 staged `name-status`·`stat`·`check`, Markdown·secret 감사를 거쳐 별도 push했으며 generated output, credential, local IDE/Expo 상태와 unrelated 파일은 포함하지 않았다.
 
 ## 12. 새 세션 재개 순서
 
 1. root `AGENTS.md`, 구현 계획서 11절·16절과 이 문서를 읽는다.
 2. `git status --short`, branch, local/tracking/live remote SHA와 Metro `8081`을 다시 확인한다.
-3. 이 문서 8절 이후 최종 Markdown 감사 결과와 현재 diff를 확인한다.
-4. Commit/push 승인이 없다면 staging·commit·push를 시작하지 않는다.
-5. 승인되면 11절의 의미 경계로 staged diff를 검토하고 push 뒤 remote parity를 독립 확인한다.
-6. 대화형 학습은 사용자가 별도로 시작한 서브 스텝 하나만 진행하며 완료를 추정하지 않는다.
+3. 1~5단계와 2026-08-13 오프라인 후속은 완료 상태이므로 요청 없이 build·설치·실기기 검증을 반복하지 않는다.
+4. 새 source·config·build 작업은 별도 목표·영향·승인 경계를 먼저 확정한다.
+5. 대화형 학습은 사용자가 지정한 서브 스텝 하나만 source와 다시 대조하며, 질문을 마쳤다는 명시적 확인 전에는 완료를 추정하지 않는다.
 
-현재 5단계의 정확한 판정은 **source 주석·최종 문서·자동 감사 완료, GitHub closeout 승인 대기**다.
+현재 5단계의 정확한 판정은 **source 주석·최종 문서·자동 감사·전체 문서 정합성·GitHub closeout 완료**다.

@@ -234,7 +234,7 @@ Android Expo Go 구현·검증과 A-1~C-5 후속 표적 검증은 완료됐다. 
 | 4 | iOS 실기기 전체 흐름 검증 | 완료 | [2026-08-12 iOS 완료 문서](./2026-08-12-ios-eas-preview-build-and-device-validation.md)의 EAS Preview Build, iPhone 전체 결과, Android 표적 회귀와 2026-08-13 network 후속 검증 |
 | 5 | 최종 인계 문서·source 주석·학습서 정리 | 대기 | 문서·주석·학습서 정합성, 전체 검사, 후속 commit/push와 원격 일치 |
 
-2026-08-12 후속 갱신으로 3단계와 4단계를 완료 처리했다. 아래의 2단계 공개 감사와 일시적 상태는 2026-08-10 당시 이력으로 보존하며, 최신 상태는 [implementation-plan.md](./implementation-plan.md) 15절과 4단계 완료 문서를 우선한다.
+2026-08-12 후속 갱신으로 3단계와 4단계를 완료 처리했다. 아래의 2단계 공개 감사와 일시적 상태는 2026-08-10 당시 이력으로 보존하며, 최신 상태는 [implementation-plan.md](./implementation-plan.md) 16절, 이 문서 13절과 [5단계 최종 인계](./2026-08-13-step-5-final-handoff.md)를 우선한다.
 
 ### 2단계 Public 공개 전 감사 상태
 
@@ -324,3 +324,22 @@ Android Expo Go와 development build 결과는 이전 절의 이력으로 유지
 - Commit/push와 원격 일치 확인은 변경·검증 결과를 먼저 제시한 뒤 사용자의 별도 승인 대상으로 유지한다.
 
 따라서 이 문서의 Android 결과는 과거 완료 증거로 그대로 유효하며, 최신 제품 단계 상태는 구현 계획서 16절과 5단계 최종 인계를 우선한다.
+
+## 13. 2026-08-13 5단계 완료와 GitHub closeout
+
+사용자가 5단계 결과 검토 뒤 의미별 commit/push와 전체 `docs/` stale 감사를 승인했다. 완료된 Android build·설치·실기기 검증은 반복하지 않고 주석·문서와 Git 경계만 닫았다.
+
+| Commit | 의미 |
+|---|---|
+| `c13dbaebad4e4a09a79fa78be1e33819585e0cff` | Production·test·tooling의 파일 역할, 검증 경계와 canonical FLOW 주석 |
+| `095d42817ba8df7ce87a722ba4f9ab6bf95720b9` | 한글 `AGENTS.md`, architecture·source commentary·learning guide와 5단계 본문 인계 |
+
+두 commit의 첫 push 뒤 local `HEAD`, `origin/master`, `git ls-remote`와 unauthenticated GitHub REST API의 `master` SHA가 모두 `095d42817ba8df7ce87a722ba4f9ab6bf95720b9`로 일치했고, 저장소는 `public`, default branch는 `master`, ahead/behind는 `0 0`, worktree는 clean이었다.
+
+이후 `docs/` 10개 전체를 source·package·Git history와 대조해 당시 next-step 문장은 역사적 snapshot으로 보존하고 최신 우선 관계를 보완했다. 이 최종 정합성 갱신은 `Docs: 5단계 GitHub closeout 기록` commit으로 분리한다. 자기 자신을 포함하는 commit SHA는 문서에 고정하지 않으며 다음 명령으로 확인한다.
+
+```powershell
+git log -1 --format=%H -- docs/2026-08-13-step-5-final-handoff.md
+```
+
+현재 제품 단계와 최종 Git 판정은 [5단계 최종 인계](./2026-08-13-step-5-final-handoff.md)를 우선한다. 1~5단계는 완료됐으며 새 build·실기기 작업은 별도 범위와 승인 없이는 시작하지 않는다.

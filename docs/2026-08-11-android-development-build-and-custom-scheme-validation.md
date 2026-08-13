@@ -204,3 +204,9 @@ source/test는 `073c2cad87ccd2b8dc6d91dd604fa631b4829fff`로 문서와 분리했
 이후 사용자가 5단계 최종 인계 문서·source 주석·학습서 정리를 승인했다. 이번 단계는 production 실행식, scheme, package, native config와 launcher-free debug build를 변경하지 않으므로 3단계 build·설치·custom scheme 실기기 검증을 반복하지 않는다.
 
 현재 architecture와 source FLOW, 자동 검사, 공개 감사, Git closeout 상태는 [2026-08-13 5단계 최종 인계](./2026-08-13-step-5-final-handoff.md)를 따른다. Commit/push는 변경 결과 검토 뒤 별도 승인 대상으로 남긴다.
+
+### 8.4 2026-08-13 5단계 완료 갱신
+
+사용자가 5단계 결과 검토 뒤 commit/push와 `docs/` 전체 stale 감사를 승인했다. Source·test·tooling 주석은 `c13dbaebad4e4a09a79fa78be1e33819585e0cff`, 본문 문서는 `095d42817ba8df7ce87a722ba4f9ab6bf95720b9`로 분리했고 첫 push 뒤 local·tracking·live remote와 GitHub API의 `master`가 두 번째 SHA로 일치했다.
+
+후속 `Docs: 5단계 GitHub closeout 기록` commit은 최종 상태 문서만 갱신한다. 3단계의 launcher-free development build, custom scheme, Metro-off 실패 분석과 실기기 판정은 그대로 유효하며 이번 5단계에서 build·설치·기기 검증을 반복하지 않았다. 최신 완료·Git parity는 [5단계 최종 인계](./2026-08-13-step-5-final-handoff.md)를 우선한다.

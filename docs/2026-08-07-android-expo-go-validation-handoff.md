@@ -7,7 +7,7 @@
 - 중단 위치: 27단계 사진 두 장 선택
 - 다음 시작점: 27단계 원인 진단 및 재검증
 
-> 이 문서는 2026-08-07 중단 시점의 기록을 보존한다. 27단계 원인 진단부터 Android Expo Go 완료까지의 최신 결과는 [2026-08-10 Android Expo Go 실기기 검증 완료 보고서](./2026-08-10-android-expo-go-validation-completion.md)를 따른다.
+> 이 문서는 2026-08-07 중단 시점의 기록을 보존한다. 27단계 원인 진단부터 Android Expo Go 완료까지의 결과는 [2026-08-10 Android Expo Go 실기기 검증 완료 보고서](./2026-08-10-android-expo-go-validation-completion.md), 이후 2~5단계와 현재 Git 상태는 [2026-08-13 5단계 최종 인계](./2026-08-13-step-5-final-handoff.md)를 따른다.
 
 ## 1. 현재 상태 요약
 

@@ -9,6 +9,8 @@
 - 이전 runtime 기준: [Android Expo Go 검증 완료 보고서](./2026-08-10-android-expo-go-validation-completion.md)
 - 단계 상태: 2단계 완료, 다음 작업은 3단계 Android development build와 외부 custom scheme 검증
 
+> 이 문서는 2026-08-10의 초기 Public 저장소 생성과 push 증거를 보존한다. 아래의 다음 단계·현재 상태 문장은 당시 snapshot이며, 3~5단계 완료와 현재 원격 상태는 이 문서 9절과 [2026-08-13 5단계 최종 인계](./2026-08-13-step-5-final-handoff.md)를 우선한다.
+
 ## 1. 작업 범위
 
 빈 Public GitHub 저장소를 사용자가 생성하고, `reset-project` 전후 항목이 섞여 있던 최초 index를 현재 working tree 기준으로 다시 구성했다. source, tests, config와 문서를 단계·기능·의미별 commit으로 나누어 1차 push한 뒤 README와 GitHub 결과 문서를 갱신해 별도 문서 commit으로 2차 push한다.
@@ -96,3 +98,12 @@ docs/2026-08-10-github-repository-and-initial-push-handoff.md를 읽고
 완료된 1~2단계를 반복하지 말고 3단계의 목표·완료 기준·내가 할 작업·네가 할 작업·제외 범위를 먼저 설명한 뒤
 내 시작 승인을 기다려줘.
 ```
+
+## 9. 2026-08-13 5단계와 최종 Public closeout
+
+초기 Public 이력 이후 3단계 Android development build, 4단계 iOS Preview Build·오프라인 후속과 5단계 최종 인계를 모두 완료했다. 5단계는 다음 두 의미별 commit을 먼저 push했다.
+
+- `c13dbaebad4e4a09a79fa78be1e33819585e0cff`: source·test·tooling 역할과 FLOW 주석
+- `095d42817ba8df7ce87a722ba4f9ab6bf95720b9`: `AGENTS.md`, README, architecture·학습·인계 본문
+
+첫 push 뒤 local·tracking·live remote와 GitHub REST API `master`는 `095d42817ba8df7ce87a722ba4f9ab6bf95720b9`로 일치했다. 저장소는 계속 `public`, default branch는 `master`다. 전체 `docs/` stale 감사와 완료 상태를 담은 마지막 closeout commit은 자기 SHA를 본문에 넣지 않고 Git history로 식별한다. 최신 검증·제외 범위와 최종 parity 판정은 [5단계 최종 인계](./2026-08-13-step-5-final-handoff.md)를 따른다.

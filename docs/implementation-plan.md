@@ -4,7 +4,7 @@
 - 대상 프로젝트: `my-webview-app`
 - 대상 플랫폼: Android, iOS
 - 기준 런타임: Expo SDK 54 / Expo Go 우선
-- 상태: 1~4단계와 오프라인 후속 검증 완료, 5단계 진행 중
+- 상태: 1~5단계와 2026-08-13 오프라인 후속 검증·GitHub closeout 완료
 
 ## 1. 목표와 기준
 
@@ -162,7 +162,7 @@ type BridgeResponse<T = unknown> = {
 - iOS Web 탭에는 back/forward 버튼과 swipe gesture를 제공한다.
 - `mywebviewapp://webviewappdemo?target=1&url=m.nate.com`을 지원한다.
 - WebView 안에서 누른 자체 scheme은 앱이 직접 가로채 Expo Go에서도 동일 탭 이동을 수행한다.
-- 외부 custom-scheme launch는 development build에서 별도로 검증한다.
+- 외부 custom-scheme launch는 3단계 Android development build에서 cold·warm 진입을 실제 검증했다.
 
 ## 5. 검증 및 완료 기준
 
@@ -205,7 +205,7 @@ npm test -- --runInBand
 - React Hook Form, Expo SQLite
 - HTTP cleartext, SSL 우회, 전체 ATS 허용
 - 결제 앱별 설치 확인 및 store 이동 목록
-- Git commit/push, EAS 계정 및 서명 작업
+- 1단계 기능 구현 자체의 Git commit/push, EAS 계정 및 서명 작업. 이 항목들은 후속 2~5단계에서 별도 승인·기록 경계로 수행했다.
 
 ## 7. 구현 및 검증 결과
 
@@ -325,7 +325,7 @@ Android 표적 재검증은 LG `LM-V500N`, Android 12(API 31), Expo Go `54.0.8`�
 | 2 | Public GitHub 저장소 생성과 의미별 초기 commit/push | 완료 | 공개 전 민감 정보 감사, 사용자의 빈 저장소 생성 | 단계·기능·의미별 commit과 1차 push, GitHub 결과 문서 갱신 commit과 2차 push, local/remote 일치 확인 |
 | 3 | Android development build와 외부 custom scheme 검증 | 완료 | 2단계 완료, 사용자의 명시적 시작, build 방식·서명 범위 확인 | [2026-08-11 완료 문서](./2026-08-11-android-development-build-and-custom-scheme-validation.md)의 cold/warm custom scheme, 표적 회귀와 자동 검사 |
 | 4 | iOS 실기기 전체 흐름 검증 | 완료 | EAS remote iOS build와 iPhone 11 설치·검증 환경 준비 | [2026-08-12 완료 문서](./2026-08-12-ios-eas-preview-build-and-device-validation.md)의 기능 동등성, iOS 고유 탐색·권한·lifecycle, Android 표적 회귀와 2026-08-13 오프라인 오류 복구 후속 검증 |
-| 5 | 최종 인계 문서·source 주석·학습서 정리 | 진행 중 | 3~4단계 결과 확정 완료, 사용자의 명시적 시작 | 필수 문서와 주석 완성, 전체 검증, 후속 commit/push 및 원격 일치 확인 |
+| 5 | 최종 인계 문서·source 주석·학습서 정리 | 완료 | 3~4단계 결과 확정 완료, 사용자의 명시적 시작 | 필수 문서·주석, 전체 검증, `docs/` stale 감사, 의미별 commit/push와 원격 일치 확인 |
 
 ### 2단계: Public GitHub 저장소와 초기 이력
 
@@ -380,21 +380,21 @@ Android 표적 재검증은 LG `LM-V500N`, Android 12(API 31), Expo Go `54.0.8`�
 
 ### 새 세션 재개 규칙
 
-1. root `AGENTS.md`, 이 계획서의 11절·최신 완료 절과 [Android Expo Go 완료 보고서](./2026-08-10-android-expo-go-validation-completion.md), [iOS 4단계 완료 문서](./2026-08-12-ios-eas-preview-build-and-device-validation.md)의 최신 인계 절을 끝까지 읽는다.
+1. root `AGENTS.md`, 이 계획서의 11절·16절과 [5단계 최종 인계](./2026-08-13-step-5-final-handoff.md)를 끝까지 읽는다. 과거 Android/iOS 결과가 필요할 때만 해당 날짜 문서의 완료 절을 함께 읽는다.
 2. 현재 source, package, Git branch·HEAD·remote·worktree, Metro·Expo Go와 사용 가능한 build 환경을 다시 확인한다. 실기기 검증은 사용자가 해당 단계의 검증 기기로 명시한 기기만 사용하며, 단순히 연결되어 있다는 이유로 다른 기기를 조회·설치·실행 대상으로 삼지 않는다. 이 문서의 일시적 외부 상태를 현재 사실로 가정하지 않는다.
-3. 완료된 2~4단계는 반복하지 않는다. 현재 미완료인 5단계의 목표, 완료 기준, 사용자 수동 작업, Codex 작업과 제외 범위를 먼저 설명하고 명시적인 시작을 기다린다.
+3. 1~5단계와 2026-08-13 오프라인 후속은 완료됐다. 사용자가 새 범위를 요청하지 않으면 build·설치·실기기 검증이나 5단계 closeout을 반복하지 않는다.
 4. source·package·build·config를 바꾸기 전에는 실제 caller와 consumer를 조사해 Impact Review를 제시하고 Expo 관련 구현은 exact SDK 54 공식 문서를 다시 읽는다.
-5. 한 번에 한 단계만 진행한다. EAS·서명·원격 저장소·commit·push와 다음 단계는 사용자의 승인 없이 자동으로 시작하지 않는다.
+5. 새 작업도 한 번에 한 범위만 진행한다. EAS·서명·외부 서비스·원격 저장소·commit·push는 해당 작업의 사용자 승인 없이 자동으로 시작하지 않는다.
 
 새 세션에서 사용할 수 있는 요청문은 다음과 같다.
 
 ```text
 D:\Development\ReactNative\Workspaces\my-webview-app에서 AGENTS.md,
-docs/implementation-plan.md의 11절,
-docs/2026-08-10-android-expo-go-validation-completion.md의 최신 인계 절을 읽고
+docs/implementation-plan.md의 11절·16절,
+docs/2026-08-13-step-5-final-handoff.md를 읽고
 현재 source·Git·runtime 상태를 다시 확인해줘.
-완료된 2~4단계는 반복하지 말고 5단계의 목표·완료 기준·내가 할 작업·네가 할 작업·제외 범위를 먼저 설명하고,
-아직 실제 변경이나 외부 작업은 시작하지 말고 내 시작 승인을 기다려줘.
+완료된 1~5단계와 오프라인 후속 검증은 반복하지 말고, 내가 요청한 새 범위의 목표·완료 기준·내가 할 작업·네가 할 작업·제외 범위를 먼저 설명해줘.
+아직 source·config·build·외부 서비스·Git 변경은 시작하지 말고 내 승인을 기다려줘.
 ```
 
 ## 12. 2026-08-10 Public GitHub 저장소와 초기 push 완료
@@ -458,7 +458,7 @@ docs/2026-08-10-android-expo-go-validation-completion.md의 최신 인계 절을
 
 4단계의 누락된 network 실기 항목까지 보완됐고 차단 요소는 없다. 다음 미완료 제품 단계는 5단계 `최종 인계 문서·source 주석·학습서 정리`이며, 이번 후속 문서와 GitHub 원격 일치 확인을 마친 뒤에도 사용자의 별도 시작 지시를 기다린다.
 
-## 16. 2026-08-13 5단계 최종 인계 정리 진행
+## 16. 2026-08-13 5단계 최종 인계 정리 완료
 
 사용자가 5단계 시작, `agents-md-improver` 제안 반영과 `docs/2026-08-13-step-5-final-handoff.md` 생성을 승인했다. 시작 전 local `master`, `HEAD`, `origin/master`, live remote `master`는 모두 `65f5b2d89850b9c72fca593deec579da3c39eae0`로 일치했고 worktree는 clean, Metro `8081`은 닫혀 있었다.
 
@@ -491,15 +491,28 @@ docs/2026-08-10-android-expo-go-validation-completion.md의 최신 인계 절을
 | Generated ignore | `.expo`, `/android`, `/ios`, `node_modules`, signing 확장자와 `expo-env.d.ts` ignore 확인 |
 | Markdown 감사 | 전체 13개 파일의 깨진 local link·홀수 code fence·heading jump·trailing whitespace 각각 0 |
 | Learning guide 구성 | 32개 서브 스텝, 제외 요청한 독립 반복 장 제목 0 |
+| `docs/` stale 감사 | 10/10 문서의 현재 상태·source/package 수치·Git revision·link·최신 우선 관계 대조 |
+| External URL | 일반 web URL 12개 HTTP 200, `.git` clone URL `git ls-remote` 성공 |
 
 Markdown 감사와 최종 `git diff --check`의 상세 결과는 [5단계 최종 인계](./2026-08-13-step-5-final-handoff.md)의 최신 검증 표를 우선한다.
 
-### 16.3 제외와 남은 Git 경계
+### 16.3 제외와 실제 Git closeout
 
 - Production 실행식, `package.json`, lockfile, `app.json`, `eas.json`, scheme, package/bundle identifier와 native config는 변경하지 않았다.
 - 완료된 Android/iOS build·설치·실기기·EAS·서명 검증을 반복하지 않았고 새 external service 변경도 없다.
 - 5단계 본문 산출물과 자동 감사에는 기술적 차단 요소가 없다.
-- Commit/push는 별도 승인 전 수행하지 않는다. 현재 local `HEAD`, tracking ref와 remote는 시작 SHA를 유지하며 worktree의 5단계 변경은 미commit 상태다.
-- 권장 경계는 source/test/tooling 주석과 문서·AGENTS/README/계획·handoff를 분리하고, 첫 push parity 확인 뒤 정확한 commit SHA와 최종 clean/remote 상태를 closeout 문서 commit으로 남기는 순서다.
+- Source·test·tooling 주석은 `c13dbaebad4e4a09a79fa78be1e33819585e0cff` (`Docs: 5단계 source 역할과 FLOW 주석 정리`)로 분리했다.
+- `AGENTS.md`, README, architecture·source commentary·learning guide와 본문 인계는 `095d42817ba8df7ce87a722ba4f9ab6bf95720b9` (`Docs: 5단계 architecture와 학습 인계 정리`)로 분리했다.
+- 첫 두 commit push 뒤 local `HEAD`, `origin/master`, `git ls-remote`와 GitHub REST API의 `master`가 모두 `095d42817ba8df7ce87a722ba4f9ab6bf95720b9`로 일치했고 저장소는 `public`, default branch는 `master`, ahead/behind는 `0 0`, worktree는 clean이었다.
+- 전체 문서 stale 감사와 완료 판정은 `Docs: 5단계 GitHub closeout 기록` commit으로 분리했다. 이 commit의 SHA는 문서 자기 참조를 피하기 위해 고정하지 않고 `git log -1 --format=%H -- docs/2026-08-13-step-5-final-handoff.md`로 확인한다.
+- 마지막 push 뒤 local·tracking·live remote·GitHub API와 clean worktree를 다시 확인하며, 그 정확한 최종 SHA는 Git history와 최종 실행 보고를 기준으로 한다.
 
-따라서 5단계 상태는 **본문 작성과 자동 검증 완료, GitHub closeout 별도 승인 대기**다. Commit/push와 최종 remote parity가 끝나기 전에는 단계 전체를 완료로 바꾸지 않는다.
+### 16.4 전체 문서 stale·정합성 결론
+
+- `docs/`의 10개 문서를 모두 조사했다. 2026-08-07 중단 handoff와 2026-08-10 초기 GitHub handoff는 역사적 snapshot임을 문서 상단에 명시했다.
+- Android Expo Go 완료 문서, Android development build 문서와 iOS Preview Build 문서는 당시 build·기기·test 증거를 보존하고 최신 5단계 완료 절을 append했다.
+- Architecture, source commentary와 learning guide는 현재 source·package·FLOW·test 수치와 일치해 상태 변경이 필요하지 않았다.
+- 문서의 모든 backtick Git revision은 실제 commit으로 해석됐고, repository Markdown 13개의 local link·code fence·heading·whitespace 감사와 공개 민감정보 검사를 통과했다.
+- README는 Expo/React Native/React version, 15 suites·50 tests, Android/iOS/offline 결과와 최신 문서 link가 현재 repository와 일치했다.
+
+따라서 5단계 상태는 **최종 인계·source 주석·학습서·자동 검사·전체 문서 정합성·GitHub closeout 완료**다. 1~5단계는 모두 완료됐으며 이후 작업은 별도 목표와 승인으로 시작한다.
