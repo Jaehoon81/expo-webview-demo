@@ -7,6 +7,7 @@ import {
 } from "react";
 import {
   ActivityIndicator,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -37,6 +38,7 @@ export type WebTabHandle = {
 type WebTabProps = {
   tag: TabTag;
   active: boolean;
+  bottomContentInset: number;
   initialSource: WebViewSource;
   onBridgeMessage: (message: string) => Promise<BridgeResponse>;
   onNavigationRequest: (url: string) => boolean;
@@ -53,6 +55,7 @@ export const WebTab = forwardRef<WebTabHandle, WebTabProps>(function WebTab(
   {
     tag,
     active,
+    bottomContentInset,
     initialSource,
     onBridgeMessage,
     onNavigationRequest,
@@ -66,10 +69,14 @@ export const WebTab = forwardRef<WebTabHandle, WebTabProps>(function WebTab(
   const canGoForwardRef = useRef(false);
   const hasLoadedDocumentRef = useRef(false);
   const previousScrollOffsetRef = useRef(0);
+  const iosErrorRecoveryRef = useRef(false);
   const [source, setSource] = useState<WebViewSource>(initialSource);
   const [reloadKey, setReloadKey] = useState(0);
   const [progress, setProgress] = useState(0);
   const [loadError, setLoadError] = useState<LoadError | null>(null);
+  const centeredContentInsetStyle = {
+    paddingBottom: bottomContentInset + 24,
+  };
 
   const injectBridgeResponse = useCallback((response: BridgeResponse) => {
     const serializedResponse = JSON.stringify(response);
@@ -78,6 +85,18 @@ export const WebTab = forwardRef<WebTabHandle, WebTabProps>(function WebTab(
       `window.calledByNative && window.calledByNative(${functionArgument}); true;`,
     );
   }, []);
+
+  const preserveBottomBarDuringIosErrorRecovery = useCallback(() => {
+    if (Platform.OS !== "ios") {
+      return;
+    }
+
+    iosErrorRecoveryRef.current = true;
+
+    if (active) {
+      onScrollDirection("up");
+    }
+  }, [active, onScrollDirection]);
 
   const reloadInitial = useCallback(() => {
     setLoadError(null);
@@ -161,7 +180,7 @@ export const WebTab = forwardRef<WebTabHandle, WebTabProps>(function WebTab(
         webviewDebuggingEnabled={__DEV__}
         startInLoadingState
         renderLoading={() => (
-          <View style={styles.loading}>
+          <View style={[styles.loading, centeredContentInsetStyle]}>
             <ActivityIndicator size="large" />
             <Text style={styles.loadingText}>웹 페이지를 불러오고 있습니다.</Text>
           </View>
@@ -171,6 +190,11 @@ export const WebTab = forwardRef<WebTabHandle, WebTabProps>(function WebTab(
         }}
         onLoadProgress={(event) => {
           setProgress(event.nativeEvent.progress);
+        }}
+        onLoad={() => {
+          if (Platform.OS === "ios") {
+            iosErrorRecoveryRef.current = false;
+          }
         }}
         onLoadEnd={() => {
           hasLoadedDocumentRef.current = true;
@@ -199,18 +223,24 @@ export const WebTab = forwardRef<WebTabHandle, WebTabProps>(function WebTab(
           );
           previousScrollOffsetRef.current = currentOffset;
 
-          if (active && direction) {
+          const ignoreIosErrorScroll =
+            Platform.OS === "ios" &&
+            (loadError !== null || iosErrorRecoveryRef.current);
+
+          if (active && direction && !ignoreIosErrorScroll) {
             onScrollDirection(direction);
           }
         }}
         onError={(event) => {
           event.preventDefault();
+          preserveBottomBarDuringIosErrorRecovery();
           setLoadError({
             title: "웹 페이지를 열 수 없습니다.",
             description: event.nativeEvent.description,
           });
         }}
         onHttpError={(event) => {
+          preserveBottomBarDuringIosErrorRecovery();
           setLoadError({
             title: `HTTP ${event.nativeEvent.statusCode} 오류`,
             description:
@@ -220,13 +250,17 @@ export const WebTab = forwardRef<WebTabHandle, WebTabProps>(function WebTab(
       />
 
       {loadError ? (
-        <View accessibilityRole="alert" style={styles.errorOverlay}>
+        <View
+          accessibilityRole="alert"
+          style={[styles.errorOverlay, centeredContentInsetStyle]}
+        >
           <Text style={styles.errorTitle}>{loadError.title}</Text>
           <Text style={styles.errorDescription}>{loadError.description}</Text>
           <View style={styles.errorActions}>
             <Pressable
               accessibilityRole="button"
               onPress={() => {
+                preserveBottomBarDuringIosErrorRecovery();
                 setLoadError(null);
                 webViewRef.current?.reload();
               }}
@@ -236,7 +270,10 @@ export const WebTab = forwardRef<WebTabHandle, WebTabProps>(function WebTab(
             </Pressable>
             <Pressable
               accessibilityRole="button"
-              onPress={reloadInitial}
+              onPress={() => {
+                preserveBottomBarDuringIosErrorRecovery();
+                reloadInitial();
+              }}
               style={styles.secondaryButton}
             >
               <Text style={styles.secondaryButtonText}>초기 화면</Text>
@@ -274,6 +311,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 12,
+    padding: 24,
     backgroundColor: "#FFFFFF",
   },
   loadingText: {

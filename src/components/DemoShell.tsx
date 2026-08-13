@@ -414,6 +414,7 @@ export function DemoShell() {
         {TAB_DEFINITIONS.slice(0, 3).map((tab) => (
           <WebTab
             active={selectedTabIndex === tab.index}
+            bottomContentInset={bottomBarHiddenOffset}
             initialSource={
               tab.index === 0
                 ? { html: LOCAL_DEMO_HTML, baseUrl: LOCAL_WEB_BASE_URL }
