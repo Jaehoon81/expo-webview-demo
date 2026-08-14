@@ -2,54 +2,139 @@
 
 이 문서는 사용자가 설명을 기다리지 않고 실제 source를 직접 열어 흐름을 따라가기 위한 안내서다. 전체 구조를 먼저 보고 싶으면 [내부 구조와 동작](./architecture-internals.md), Codex와 한 서브 스텝씩 대화하며 학습하려면 [구현 학습서](./learning-guide.md)를 사용한다.
 
-source identifier, API 이름과 path는 원문 그대로 읽고, 한국어 주석은 “이 줄이 보이는 문법”보다 책임·이유·수명·경계를 설명하는 보조 지도다.
+변수명, 함수명, API 이름, 문법 이름과 path는 source에 적힌 원문 그대로 읽는다. 그 밖의 설명은 처음 코드를 보는 사람도 바로 이해할 수 있는 한국어로 쓴다. 전문 용어가 꼭 필요하면 같은 문장이나 바로 다음 문장에서 “누가, 언제, 무엇을 하는지”를 쉬운 말로 풀어 준다. `[역할]`, `[문법]`과 `[라이브러리]`는 그 설명을 찾는 표식이다.
+
+주석은 코드에 보이는 글자를 그대로 읽어 주는 사전이 아니다. 코드만 봐서는 알기 어려운 책임, 선택 이유, 값이 남는 기간, 실행 순서, 실제 기기에서만 확인할 수 있는 범위를 설명한다.
 
 ## 1. 주석 표식
 
 ### `[파일 역할]`
 
-파일이 어느 계층에 있고 어떤 책임을 끝까지 소유하는지 설명한다. 파일을 처음 열면 import보다 이 표식을 먼저 읽는다.
+이 파일이 무슨 일을 하고, 누가 이 파일을 사용하며, 결과를 어디로 보내는지 설명한다. 파일을 처음 열면 import보다 이 표식을 먼저 읽는다.
 
 예:
 
 ```ts
-// [파일 역할] 한 WebView tab의 document/history, imperative navigation,
-// bridge 왕복, progress·오류·scroll 상태를 소유합니다.
+// [파일 역할] WebView 탭 하나를 화면에 띄우고,
+// 그 탭에서 연 웹 문서와 방문 기록을 관리합니다.
 ```
 
-이 문장은 `WebTab`이 URL 정책·기기 기능까지 직접 구현한다는 뜻이 아니다. URL policy는 service, bridge action은 dispatcher와 주입 dependency, 전체 조합은 `DemoShell`이 맡는다.
+이 문장은 `WebTab`이 URL 검사와 휴대폰 기능까지 모두 직접 만든다는 뜻이 아니다. URL은 service가 검사하고, bridge 요청은 dispatcher가 알맞은 기능으로 보낸다. `DemoShell`은 이 파일들을 서로 이어 준다.
 
-### `[FLOW-NN]`
+### `[역할]`
 
-여러 파일을 통과하는 canonical 흐름의 시작 표식이다. `FLOW-01`부터 `FLOW-09`까지 각 표식은 production source 전체에서 한 번만 존재한다.
-
-### `[FLOW-NN / N단계]`
-
-canonical 흐름 안에서 실제로 다음 파일·함수로 이동할 지점을 나타낸다. 같은 flow와 단계 번호 조합도 production source 전체에서 한 번만 사용한다.
-
-단계가 source 파일의 위에서 아래 순서와 항상 같지는 않다. 예를 들어 `useUsersQuery`는 파일 아래쪽에 있고 그 안에서 호출하는 `fetchUsers`는 파일 위쪽에 있다. 이 문서의 순서대로 symbol을 찾아가면 된다.
-
-### `[FLOW-NN / 관련 코드]`
-
-canonical 단계는 아니지만 같은 계약을 공유하는 다른 caller·consumer다. 같은 표식은 여러 곳에 있을 수 있다.
+함수 하나가 어떤 입력을 받아 무엇을 하고, 결과를 어디에 전달하는지 짧게 요약한다. 함수 선언, React component, `useEffect`·`useCallback` callback, event·listener·timer·cleanup callback, 배열 변환 함수와 test callback도 각각 자기 `[역할]`을 갖는다.
 
 예:
 
-- WebView와 FlatList가 같은 scroll helper를 사용함
-- 사진·알림 service가 bridge dispatcher dependency로 연결됨
-- Query client singleton이 사용자 cache를 보존함
+```ts
+// [역할] `handleNavigationRequest`는 URL 검사 결과를 실제 허용·차단·외부 앱 동작으로 실행합니다.
+const handleNavigationRequest = useCallback((url: string): boolean => {
+  // ...
+}, []);
+```
+
+함수 type만 선언하는 field도 다른 파일이 그 함수를 어떤 목적으로 건네야 하는지 중요하면 `[역할]`로 설명한다. state·ref처럼 함수는 아니지만 이후 함수를 이해하는 기준값도 필요할 때 같은 표식을 사용할 수 있다. 그래서 `[역할]` 개수는 실제 함수 개수보다 많을 수 있다.
+
+`onPress={handlePress}`처럼 이미 설명한 함수를 그대로 넘기는 줄에는 같은 설명을 반복하지 않는다. 새 arrow function이나 callback을 그 자리에서 만들었을 때는 그 callback이 추가로 맡은 일을 설명한다.
+
+### `[문법]`
+
+현재 줄을 이해하는 데 필요한 TypeScript, JavaScript, React 문법을 설명한다. `as const`, generic, optional chaining, 구조 분해처럼 이름을 그대로 써야 정확한 문법은 원문을 유지한다. 그 뒤에는 이 코드에서 값이나 실행 순서가 실제로 어떻게 달라지는지 쉬운 한국어로 설명한다.
+
+예:
+
+```ts
+// [문법] `z.infer<typeof requestSchema>`는 requestSchema가 검사하는 값의 모양을
+// TypeScript type으로도 가져옵니다. 검사 규칙과 type을 따로 두 번 적지 않아도 됩니다.
+```
+
+`const`가 값을 선언한다거나 `return`이 값을 돌려준다는 식으로 눈에 보이는 코드만 되풀이하지 않는다. 같은 문법이 같은 뜻으로 반복되면 첫 설명을 다시 붙이지 않는다. 다만 같은 문법이라도 값이 남는 기간이나 실행 순서가 달라지면 그 차이를 다시 설명한다.
+
+### `[라이브러리]`
+
+React, React Native, Expo SDK 54 package와 project library가 이 코드에서 해 주는 일을 설명한다. 예를 들어 Hook이 언제 event를 듣기 시작하고 멈추는지, WebView callback이 언제 오는지, TanStack Query가 받은 값을 얼마나 보관하는지처럼 일반 문법만으로 알 수 없는 동작을 풀어 쓴다.
+
+예:
+
+```ts
+// [라이브러리] `useImperativeHandle`은 DemoShell의 ref에 실제 WebView 전체가 아니라
+// 이 화면에서 허용한 명령만 넣어 줍니다.
+```
+
+import마다 package 소개를 반복하지 않는다. 같은 library라도 이 코드에서 맡은 일이 달라지거나, event 듣기를 멈추는 시점과 보관한 값이 사라지는 시점이 중요할 때 다시 설명한다.
+
+### 기능 구분선
+
+한 파일의 코드와 주석이 길어지면 기능과 의미가 같은 범위를 시작·종료 구분선으로 묶는다. 큰 책임은 `=`, 큰 책임 안의 작은 단계는 `-`를 사용한다.
+
+```ts
+// ====================================== WebView 상태와 ref =======================================
+
+// 같은 큰 책임에 속한 코드
+
+// =================================================================================================
+
+  // ------------------------------------------ 오류 감지 ------------------------------------------
+
+  // 큰 책임 안의 작은 단계에 속한 코드
+
+  // -----------------------------------------------------------------------------------------------
+```
+
+- 시작 구분선 가운데에는 해당 범위를 대표하는 짧은 keyword를 쓴다.
+- 종료 구분선에는 keyword를 반복하지 않고 같은 기호만 쓴다.
+- 모든 시작 구분선은 같은 단계의 종료 구분선과 짝을 이룬다.
+- 시작·종료 구분선 위아래에는 빈 줄을 한 줄씩 둔다.
+- 들여쓰기를 포함해 화면에서 보이는 전체 길이를 100칸으로 맞춘다. 한글은 영문보다 넓게 보이므로 글자 수가 아니라 실제 표시 폭을 기준으로 한다.
+- 짧은 파일은 실제 책임 수만큼만 나눈다. JSX 닫기 tag나 style property처럼 의미가 새로 생기지 않는 곳에는 구분선을 늘리지 않는다.
+
+### `[FLOW-NN]`
+
+여러 파일을 차례로 거치는 기능 흐름의 출발점이다. `FLOW-01`부터 `FLOW-09`까지 각 표식은 실제 앱 source 전체에서 한 번만 나온다.
+
+### `[FLOW-NN / N단계]`
+
+해당 기능 흐름에서 몇 번째 단계인지 나타낸다. 같은 flow와 단계 번호 조합도 실제 앱 source 전체에서 한 번만 사용한다.
+
+단계 번호가 파일의 위에서 아래 순서와 항상 같지는 않다. 예를 들어 `useUsersQuery`는 파일 아래쪽에 있지만, 그 함수가 부르는 `fetchUsers`는 파일 위쪽에 있다. 이 문서에 적힌 순서대로 함수 이름을 검색하면 된다.
+
+### `[FLOW-NN / 관련 코드]`
+
+주요 단계는 아니지만 같은 규칙을 함께 사용하는 코드다. 같은 표식이 여러 파일에 나올 수 있다.
+
+예:
+
+- WebView와 FlatList가 같은 함수로 스크롤 방향을 계산함
+- 사진·알림 service가 bridge 요청을 실제 휴대폰 기능으로 이어 줌
+- 하나의 Query client가 받아 둔 사용자 목록을 계속 보관함
 
 ### `[이유]`
 
-더 단순해 보이는 다른 방법 대신 현재 구조를 택한 근거를 설명한다. 이 표식을 읽을 때는 “이 선택을 없애면 어떤 caller가 깨지는가”를 함께 확인한다.
+현재 방법을 선택한 이유를 설명한다. 이 표식을 읽을 때는 “이 처리를 지우면 어떤 화면이나 함수가 잘못되는가”를 함께 확인한다.
 
 ### `[주의]`
 
-문자열·index·native contract, generated file, lifecycle처럼 겉보기보다 변경 파급이 큰 지점을 표시한다.
+문자열, 탭 번호, 휴대폰 동작 규칙, 자동 생성 파일처럼 작은 수정도 예상 밖의 결과를 낼 수 있는 곳을 표시한다.
 
 ### `[검증 경계]`
 
-현재 test나 함수가 확인하는 범위와 실제 WebView·OS·기기에서만 알 수 있는 범위를 분리한다. 특히 test의 mock을 production 성공 증거로 확대하지 않기 위한 표식이다.
+현재 test나 함수가 어디까지 확인하는지 설명한다. 가짜 WebView와 가짜 함수를 사용한 test 결과를 실제 휴대폰 성공으로 잘못 이해하지 않도록, 실기기에서만 확인할 부분도 함께 적는다.
+
+### 표식 운영 계약
+
+현재 inline 주석 대상은 `app/`·`src/`의 TypeScript/TSX 43개와 `jest.setup.ts`·`eslint.config.js`를 합한 45개다. 이 가운데 production source는 28개, test는 15개, tooling entry는 2개다. JSON, lockfile, generated source와 build output은 이 수에 포함하지 않는다.
+
+- 45개 대상은 모두 `[파일 역할]`로 시작한다. 15개 test는 `[검증 경계]`도 함께 둔다.
+- 실제 함수와 Hook·event·listener·timer·cleanup·test callback에는 각각 가까운 위치에 `[역할]` 요약을 둔다.
+- 기능 범위는 keyword가 있는 시작 구분선과 keyword가 없는 종료 구분선을 짝지어 표시한다. 큰 범위는 `=`, 그 안의 작은 범위는 `-`를 사용한다.
+- `[문법]`과 `[라이브러리]`는 처음 보는 사람이 바로 다음 코드를 이해할 수 있도록 실제 코드 앞이나 같은 의미 묶음에 둔다.
+- 함수가 누가 준 값을 받고 어디로 보내는지, state·ref·Query 보관값이 언제 사라지는지, 비동기 작업이 어떤 순서로 끝나는지, Android와 iOS가 왜 다른지를 짧은 문장으로 설명한다.
+- `lifecycle`, `runtime`, `dependency`, `caller`, `consumer`, `branch`, `fixture`, `mock` 같은 개발 용어만으로 설명을 끝내지 않는다. 꼭 써야 하면 같은 문장에서 쉬운 뜻과 이 코드의 실제 동작을 붙인다.
+- 한 문장에는 가능하면 한 가지 핵심만 둔다. 문장이 길어지면 “누가 하는가”, “언제 하는가”, “왜 필요한가”로 나눈다.
+- 동일한 JSX 구조, 명백한 style property, 단순 field와 닫는 괄호는 줄마다 반복하지 않는다. 여러 줄이 하나의 계약이면 한 주석으로 묶는다.
+- 주요 `[FLOW-NN]`과 `[FLOW-NN / N단계]`는 실제 앱 source 전체에서 한 곳에만 둔다. 문법이나 library 설명이 같은 위치에 필요해도 FLOW 표식을 하나 더 만들지 않는다.
+- 주석을 고치다가 실행 오류로 보이는 부분을 찾아도 같은 변경에 섞어 고치지 않는다. 어떤 화면과 함수에 영향이 있는지 먼저 따로 보고한다.
 
 ## 2. 먼저 따라갈 아홉 가지 흐름
 
@@ -340,7 +425,7 @@ network banner가 사라지는 것은 기존 request 성공이나 자동 recover
 
 ## 4. Test를 읽을 때의 경계
 
-15개 test 파일은 모두 첫 두 줄에 `[파일 역할]`과 `[검증 경계]`가 있다. test를 읽을 때 다음 순서를 사용한다.
+15개 test 파일은 모두 첫 두 줄에 `[파일 역할]`과 `[검증 경계]`가 있고, helper·mock factory·`describe`·`it`·`act`·`waitFor` callback에는 `[역할]`이 있다. fixture·mock·event·matcher의 낯선 문법과 library 동작에는 `[문법]`·`[라이브러리]` 설명이 이어진다. test를 읽을 때 다음 순서를 사용한다.
 
 1. 무엇을 실제 production 함수로 import하는지 본다.
 2. `jest.mock`이 어느 계층을 교체하는지 본다.
@@ -398,7 +483,7 @@ JSON 값을 바꾸는 것은 문서 주석 수정이 아니라 native/build conf
 
 ### `jest.setup.ts`, `eslint.config.js`
 
-두 파일에는 inline `[파일 역할]`과 `[검증 경계]` 또는 참고 문서가 있다. Jest setup의 SecureStore mock을 실제 저장 성공으로 해석하지 않는다.
+두 파일에는 inline `[파일 역할]`, `[역할]`, `[문법]`, `[라이브러리]`와 `[검증 경계]` 또는 참고 문서가 있다. Jest setup의 SecureStore mock을 실제 저장 성공으로 해석하지 않고, ESLint flat config와 CommonJS module 문법을 production runtime code로 오해하지 않는다.
 
 ## 6. 주석에서 의도적으로 제외한 것
 
@@ -412,21 +497,23 @@ JSON 값을 바꾸는 것은 문서 주석 수정이 아니라 native/build conf
 - generated `/android`, `/ios`, `.expo`, build output
 - `LOCAL_DEMO_HTML` template literal 내부의 TypeScript 설명 주석
 
-특히 local HTML 문자열 안에 설명 comment를 넣으면 WebView가 받는 payload가 바뀐다. 그 파일은 문자열 바깥의 `[파일 역할]`과 FLOW 표식, 이 안내서, 정적 test로 설명한다.
+특히 local HTML 문자열 안에 설명 comment나 구분선을 넣으면 WebView가 받는 payload가 바뀐다. 그 파일은 문자열 바깥의 `[파일 역할]`, payload 함수별 `[역할]`, 시작·종료 구분선과 FLOW 표식, 이 안내서, 정적 test로 설명한다.
 
 ## 7. 혼자 읽을 때 권장 순서
 
 ### 첫 번째 통독
 
 1. [내부 구조와 동작](./architecture-internals.md)의 1~4절
-2. `FLOW-01` — 앱이 안전하게 시작하는 이유
-3. `FLOW-02` — 화면과 instance 수명
-4. `FLOW-03`·`FLOW-04` — 일반/popup WebView
-5. `FLOW-05` — bridge 왕복
-6. `FLOW-06` — deep link와 OS 경계
-7. `FLOW-07` — native API와 cache
-8. `FLOW-08`·`FLOW-09` — cross-cutting UI/network 상태
-9. 관심 flow의 test와 `[검증 경계]`
+2. 각 파일의 `[파일 역할]`을 읽고 `=` 큰 구분선과 `-` 작은 구분선 제목으로 찾을 범위를 정한다.
+3. 범위 안의 `[역할]`을 먼저 읽어 각 함수가 무엇을 하는지 파악한 뒤 낯선 `[문법]`·`[라이브러리]`를 실제 코드 한 줄과 대조한다.
+4. `FLOW-01` — 앱이 안전하게 시작하는 이유
+5. `FLOW-02` — 화면과 instance 수명
+6. `FLOW-03`·`FLOW-04` — 일반/popup WebView
+7. `FLOW-05` — bridge 왕복
+8. `FLOW-06` — deep link와 OS 경계
+9. `FLOW-07` — native API와 cache
+10. `FLOW-08`·`FLOW-09` — cross-cutting UI/network 상태
+11. 관심 flow의 test와 `[검증 경계]`
 
 ### 한 기능만 조사할 때
 

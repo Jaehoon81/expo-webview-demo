@@ -361,14 +361,17 @@ Android 표적 재검증은 LG `LM-V500N`, Android 12(API 31), Expo Go `54.0.8`�
 - `README.md`: Expo starter 문서를 실제 WebView 데모 앱 안내로 교체한다. 앱 목적과 주요 기능, SDK·실행 전제, 설치·Expo Go·development build 실행, 검사 명령, custom scheme, 주요 경로, 플랫폼별 검증 범위와 문서 링크를 현재 source 기준으로 작성한다.
 - `AGENTS.md`: 반드시 `agents-md-improver` 스킬을 사용한다. 실제 source, config, scripts, tests, `.gitignore`와 문서를 먼저 조사하고 점수화된 품질 보고서와 정확한 수정 제안을 제시한다. 사용자의 명시적 승인 전에는 파일을 수정하지 않는다.
 - `docs/architecture-internals.md`: `AGENTS.md`가 구조·흐름 중심 작업에서 읽도록 연결한다. 실제 디렉터리 지도와 파일 책임, app 시작과 provider, `DemoShell`·탭 lifecycle, WebView·popup·history·error·Android/iOS back, bridge request/response, deep link와 native intent, 사진·알림·device ID, Zustand 영속 상태, Axios·Zod·TanStack Query 사용자 API, network 배너, 하단 탭 animation과 검증 경계를 기술한다.
-- `docs/source-commentary-guide.md`: source에 삽입한 `[파일 역할]`, `[FLOW-NN]`, `[FLOW-NN / N단계]`, `[FLOW-NN / 관련 코드]`, `[이유]`, `[주의]`, `[검증 경계]` 표식의 의미와 주요 흐름별 source 읽기 순서를 정리한다.
+- `docs/source-commentary-guide.md`: source에 삽입한 `[파일 역할]`, `[역할]`, `[문법]`, `[라이브러리]`, `[FLOW-NN]`, `[FLOW-NN / N단계]`, `[FLOW-NN / 관련 코드]`, `[이유]`, `[주의]`, `[검증 경계]` 표식과 기능별 시작·종료 구분선의 의미, 주요 흐름별 source 읽기 순서를 정리한다.
 - `docs/learning-guide.md`: 참고 앱 `D:\Development\ReactNative\Workspaces\my-sample-app`의 학습서 구성을 참고하되 이 프로젝트 source와 실제 runtime 결과로 새로 작성한다. 앱 시작·상태 복원, 탭 전환·재선택·reload, local HTML bridge, 일반·popup WebView navigation과 오류 복구, deep link·외부 앱, 사진·알림·device ID, 사용자 API와 cache/refetch, network 단절·복원, scroll·keyboard·하단 탭 흐름을 source link와 함께 따라가도록 구성한다. 각 상태의 수명, caller/consumer, 데이터 변환, 실패·retry와 자동화·build·실기기 증거의 경계도 설명한다.
 - `docs/implementation-plan.md`, 날짜별 검증·handoff 문서와 새 development build·iOS 결과 문서를 최종 source와 대조한다. 오래된 결과는 당시 이력으로 보존하고, 최신 기준과 대체 관계를 명시하며, local link·명령·경로·version·검증 수치가 실제와 일치하는지 확인한다.
 
 #### 최종 source 주석 기준
 
-- `app/`과 `src/`의 최종 production source를 파일 단위로 검토하고 참고 앱 수준의 한국어 설명 주석을 추가한다. test에는 mock이 증명하는 범위와 실제 native/runtime에서만 확인되는 경계가 혼동될 수 있는 곳에 `[검증 경계]`를 사용한다.
-- 주석은 보이는 문법을 반복하지 않고 파일 책임, caller와 consumer, 입력·출력 변환, React state·Zustand persist·TanStack Query cache·WebView history의 수명, 비동기 순서, platform 차이와 선택 이유를 설명한다.
+- `app/`·`src/`의 TypeScript/TSX, `jest.setup.ts`, `eslint.config.js`를 파일 단위로 검토하고 참고 앱과 같은 초보자 학습 수준의 한국어 설명 주석을 추가한다. test에는 mock이 증명하는 범위와 실제 native/runtime에서만 확인되는 경계가 혼동될 수 있는 곳에 `[검증 경계]`를 사용한다.
+- 모든 함수와 React component, Hook·event·listener·timer·cleanup·test callback 가까이에는 그 코드가 받는 값, 하는 일과 결과가 가는 곳을 짧게 요약한 `[역할]`을 둔다.
+- `[문법]`은 TypeScript·JavaScript·React 문법 이름을 정확히 유지하면서 이 코드에서 값이나 실행 순서가 어떻게 달라지는지 설명하고, `[라이브러리]`는 React Native·Expo SDK 54·project library가 언제 무엇을 해 주는지 설명한다.
+- 주석은 `const`·`return`처럼 보이는 문법을 그대로 읽어 주지 않고 파일 책임, 입력·출력 변환, React state·Zustand persist·TanStack Query cache·WebView history의 수명, 비동기 순서, platform 차이와 선택 이유를 쉬운 한국어로 설명한다.
+- 큰 기능은 keyword가 있는 `=` 시작 구분선과 keyword가 없는 종료 구분선으로, 그 안의 작은 단계는 같은 방식의 `-` 구분선으로 묶는다. 각 시작·종료 선은 짝을 이루고 빈 줄을 사이에 두며 화면에서 보이는 전체 길이를 100칸으로 맞춘다.
 - 각 canonical `[FLOW-NN]`과 `[FLOW-NN / N단계]`는 source 전체에서 한 번만 사용하고, 여러 call site는 `[FLOW-NN / 관련 코드]`로 연결한다. identifier와 API 이름은 번역하거나 변경하지 않는다.
 - 주석 작업은 동작 변경과 분리한다. 주석을 달며 결함을 발견하면 즉시 함께 고치지 않고 별도 영향 검토와 사용자 합의가 필요한 source 변경으로 보고한다.
 
@@ -516,3 +519,35 @@ Markdown 감사와 최종 `git diff --check`의 상세 결과는 [5단계 최종
 - README는 Expo/React Native/React version, 15 suites·50 tests, Android/iOS/offline 결과와 최신 문서 link가 현재 repository와 일치했다.
 
 따라서 5단계 상태는 **최종 인계·source 주석·학습서·자동 검사·전체 문서 정합성·GitHub closeout 완료**다. 1~5단계는 모두 완료됐으며 이후 작업은 별도 목표와 승인으로 시작한다.
+
+## 17. 2026-08-14 source 주석 학습성 보강
+
+사용자가 기존 주석을 초보자나 제3자가 처음 읽는 관점에서 다시 검토한 뒤, 어려운 개발 용어를 쉬운 한국어로 풀고 모든 함수의 역할 요약과 기능별 구분선을 전체 파일에 확장하도록 요청했다. 이 작업은 5단계의 기능 범위나 완료 판정을 바꾸지 않고, 이미 작성한 source 설명을 더 쉽게 읽고 찾을 수 있게 보강한 후속 작업이다.
+
+### 17.1 반영 범위
+
+- 참고 앱의 일부 예시만 고르는 방식이 아니라 앞서 완료한 전체 파일 주석 비교 결과를 기준으로 현재 앱의 45개 주석 대상 파일을 다시 검토했다.
+- Production 28개, test 15개와 tooling 2개는 기존 `[파일 역할]`, `[검증 경계]`, canonical `FLOW-01`~`FLOW-09`를 보존하면서 `[역할]`, `[문법]`, `[라이브러리]` 설명을 추가·수정했다.
+- 한국어로 바꿀 수 있는 설명은 쉬운 문장으로 풀고, 변수명·함수명·props·API·문법 이름처럼 원문이 필요한 identifier만 그대로 유지했다.
+- 큰 기능은 `=` 146쌍, 큰 기능 안의 작은 단계는 `-` 20쌍의 시작·종료 구분선으로 묶었다. 모든 구분선은 화면에서 보이는 길이가 100칸이며, 시작 선만 keyword를 갖는다.
+- `[역할]` 362개, `[문법]` 140개, `[라이브러리]` 132개가 현재 source에 있다. `[역할]`은 함수 요약뿐 아니라 함수 type이나 이후 함수를 이해하는 기준값 설명도 포함하므로 함수 수와 같지 않다.
+- 반복되는 JSX, 명백한 style property, 닫는 괄호에는 설명을 늘리지 않았다. `LOCAL_DEMO_HTML` template literal 안에도 설명 주석이나 구분선을 넣지 않았다.
+- `docs/source-commentary-guide.md`에는 확장된 표식 계약과 구분선 규칙을, `docs/learning-guide.md`에는 실제 source를 읽을 때 표식과 FLOW를 함께 따라가는 순서를 반영했다.
+
+### 17.2 비동작 변경 검증과 문서 감사
+
+| 검사 | 결과 |
+|---|---|
+| 주석 대상 | 45/45 파일이 `[파일 역할]`로 시작, test 15/15에 `[검증 경계]` 유지 |
+| 함수 역할 | body가 있는 함수형 node 280/280에 서로 다른 가까운 `[역할]` 확인 |
+| 구분선 | 큰 범위 146쌍, 작은 범위 20쌍의 시작·종료·중첩·빈 줄·표시 폭 검사 통과 |
+| FLOW | 기존 canonical 9개·56단계의 표식 종류와 개수 유지, 중복·소실 0 |
+| 실행식 | 변경된 TypeScript/JavaScript 45/45의 주석 제거 후 transpile 결과가 변경 전과 동일 |
+| Local HTML payload | `LOCAL_DEMO_HTML` template literal이 변경 전과 동일 |
+| TypeScript parse | 변경된 45개 파일 diagnostic 0 |
+| 자동 검사 | Jest 15 suites·50 tests, typecheck, lint 통과 |
+| `docs/` 감사 | 10/10 문서 대조, 현재 주석 계약을 설명하는 4개 문서 갱신, architecture와 5개 과거 검증 문서는 변경 불필요 |
+
+`architecture-internals.md`의 runtime 구조와 package·test·FLOW 수치는 이번 작업으로 바뀌지 않았다. 날짜별 Android/iOS 문서는 당시 build·설치·실기기 증거를 보존하고 이 최종 인계를 우선하도록 이미 연결돼 있으므로, 새 주석을 과거 runtime 증거처럼 덧붙이지 않았다. Source 실행식·package·config·native build 입력이 바뀌지 않았기 때문에 Expo dependency/Doctor, 새 build·설치·실기기 검증은 반복하지 않는다.
+
+Source·test·tooling 주석은 `42d2a345cf21b8a7999d01541b046ee8373dd5ec` (`Docs: source 주석 학습성과 구분 구조 보강`)로 문서 변경과 분리했다. 현재 주석 계약과 전체 문서 감사 결과는 후속 `Docs:` commit으로 묶으며, 그 최종 SHA는 Git history와 push 뒤 원격 일치 확인을 기준으로 한다.

@@ -1,11 +1,12 @@
 # Expo WebView 데모 5단계 최종 인계
 
 - 작업일: 2026-08-13
+- 최종 갱신일: 2026-08-14
 - 작업 경로: `D:\Development\ReactNative\Workspaces\my-webview-app`
 - 기준 branch: `master`
 - 시작 기준 local `HEAD`: `65f5b2d89850b9c72fca593deec579da3c39eae0`
-- 현재 상태: **5단계 산출물·검증·전체 문서 정합성·GitHub closeout 완료**
-- authoritative 계획: [implementation-plan.md](./implementation-plan.md) 11절·16절
+- 현재 상태: **5단계와 후속 source 주석 학습성 보강·문서 정합성·GitHub closeout 완료**
+- authoritative 계획: [implementation-plan.md](./implementation-plan.md) 11절·16~17절
 
 이 문서는 5단계 `최종 인계 문서·source 주석·학습서 정리`의 실제 조사, 변경, 검증과 남은 Git 경계를 새 세션에서 복원하기 위한 최신 handoff다. 날짜가 있는 이전 Android/iOS 문서는 당시 build·실기기 증거로 보존하고, 5단계의 최신 source·문서·Git 상태는 이 문서를 우선한다.
 
@@ -324,10 +325,51 @@ git log -1 --format=%H -- docs/2026-08-13-step-5-final-handoff.md
 
 ## 12. 새 세션 재개 순서
 
-1. root `AGENTS.md`, 구현 계획서 11절·16절과 이 문서를 읽는다.
+1. root `AGENTS.md`, 구현 계획서 11절·16~17절과 이 문서를 읽는다.
 2. `git status --short`, branch, local/tracking/live remote SHA와 Metro `8081`을 다시 확인한다.
-3. 1~5단계와 2026-08-13 오프라인 후속은 완료 상태이므로 요청 없이 build·설치·실기기 검증을 반복하지 않는다.
+3. 1~5단계, 2026-08-13 오프라인 후속과 2026-08-14 source 주석 학습성 보강은 완료 상태이므로 요청 없이 build·설치·실기기 검증을 반복하지 않는다.
 4. 새 source·config·build 작업은 별도 목표·영향·승인 경계를 먼저 확정한다.
 5. 대화형 학습은 사용자가 지정한 서브 스텝 하나만 source와 다시 대조하며, 질문을 마쳤다는 명시적 확인 전에는 완료를 추정하지 않는다.
 
-현재 5단계의 정확한 판정은 **source 주석·최종 문서·자동 감사·전체 문서 정합성·GitHub closeout 완료**다.
+현재 정확한 판정은 **5단계 source 주석·최종 문서와 후속 학습성 보강·자동 감사·전체 문서 정합성·GitHub closeout 완료**다.
+
+## 13. 2026-08-14 source 주석 학습성 보강
+
+사용자는 5단계 주석을 확인한 뒤 초보자나 제3자가 처음 읽기에는 개발 용어가 어렵고 함수와 기능 범위를 한눈에 찾기 어렵다고 판단했다. 이에 현재 앱이 잘 설명하던 책임·이유·수명·FLOW는 보존하고, 참고 앱과 같은 초보자 학습 수준으로 45개 대상 파일의 주석을 전면 보강했다.
+
+### 13.1 확장한 주석 계약과 결과
+
+| 항목 | 결과 |
+|---|---|
+| 대상 | Production 28개, test 15개, tooling 2개로 총 45개 |
+| 파일 시작 | 45/45 `[파일 역할]`, test 15/15 `[검증 경계]` 유지 |
+| 함수 요약 | body가 있는 함수형 node 280/280에 서로 다른 가까운 `[역할]` 배치 |
+| 학습 표식 | `[역할]` 362개, `[문법]` 140개, `[라이브러리]` 132개 |
+| 큰 기능 구분 | `=` 시작·종료 146쌍, 화면 표시 폭 100칸 |
+| 작은 단계 구분 | `-` 시작·종료 20쌍, 화면 표시 폭 100칸 |
+| FLOW | canonical `FLOW-01`~`FLOW-09`와 56단계의 기존 표식 종류·개수 유지 |
+| 과잉 주석 제외 | 반복 JSX·명백한 style·닫는 괄호와 `LOCAL_DEMO_HTML` payload 내부 설명 제외 |
+
+한국어로 옮길 수 있는 설명은 “누가, 언제, 무엇을 하고 왜 필요한지”가 바로 보이도록 짧고 쉬운 문장으로 고쳤다. 변수명, 함수명, props, API와 문법 이름은 source를 검색하고 공식 계약을 확인할 수 있도록 원문을 유지했다. 상세한 표식·구분선 계약은 [소스 주석 읽기 안내서](./source-commentary-guide.md), 실제 학습 순서는 [구현 학습서](./learning-guide.md)를 따른다.
+
+### 13.2 실행식·FLOW·문서 정합성 확인
+
+| 검사 | 결과 |
+|---|---|
+| Script syntax equivalence | 변경된 TypeScript/JavaScript 45/45의 주석 제거 후 transpile 결과가 변경 전과 동일 |
+| TypeScript parse | 변경된 45개 파일 diagnostic 0 |
+| Local HTML payload | `LOCAL_DEMO_HTML` template literal이 변경 전과 동일 |
+| FLOW 감사 | 기존 marker multiset 유지, canonical 9개·56단계 중복·소실 0 |
+| 자동 검사 | Jest 15 suites·50 tests, `npm run typecheck`, `npm run lint` 통과 |
+| `docs/` inventory | 10/10 문서 대조 |
+| 현재 문서 | source commentary·learning guide·implementation plan·이 handoff를 새 계약에 맞게 갱신 |
+| 변경 불필요 문서 | architecture는 실행 구조가 그대로이고, 과거 검증 문서 5개는 당시 증거와 최신 handoff 우선 관계가 유효함 |
+
+이번 후속 작업은 source 실행식, `package.json`, lockfile, `app.json`, `eas.json`, native build 입력과 실제 앱 동작을 바꾸지 않았다. 따라서 완료된 Expo dependency/Doctor, Android/iOS build·설치·실기기 검증을 반복하지 않았으며, 이전 runtime 증거는 그대로 유지한다.
+
+Source·test·tooling 주석은 `42d2a345cf21b8a7999d01541b046ee8373dd5ec` (`Docs: source 주석 학습성과 구분 구조 보강`)로 문서 변경과 분리했다. 이 handoff를 포함한 후속 문서 commit은 자신의 SHA를 고정하지 않으며, 정확한 마지막 문서 commit과 원격 반영 상태는 다음 명령과 최종 실행 보고에서 확인한다.
+
+```powershell
+git log -1 --format=%H -- docs/2026-08-13-step-5-final-handoff.md
+git ls-remote --heads origin master
+```
