@@ -1,11 +1,25 @@
-// [파일 역할] Expo Router가 OS에서 받은 system path를 route로 해석하기 전에 demo custom scheme만 index query로 재작성합니다.
-// [검증 경계] 이 함수의 test는 문자열 변환만 증명하며 OS intent filter·앱 cold/warm launch는 development build 실기기 증거가 필요합니다.
+// [파일 역할] OS가 앱에 넘긴 주소 중 demo용 주소만 골라 첫 화면에서 읽을 수 있는 주소로 바꿉니다.
+// [검증 경계] test는 주소 문자열이 바뀌는지만 확인합니다.
+// OS가 실제로 앱을 여는지는 development build가 설치된 기기에서 확인해야 합니다.
+// [라이브러리] Expo Router는 화면을 정하기 전에 이 특별한 파일의 `redirectSystemPath`를 먼저 호출합니다.
+
+// ========================================== 외부 의존성 ==========================================
+
 import { rewriteIncomingSystemPath } from "@/src/services/native-intent";
 
+// =================================================================================================
+
+// ===================================== Expo Router 주소 hook =====================================
+
+// [역할] `redirectSystemPath`는 Expo Router가 건넨 OS 주소를 앱 첫 화면에서 읽을 주소로 바꿉니다.
+// [문법] `{ path }`는 전달받은 객체에서 path만 꺼내 같은 이름의 변수로 만드는 구조 분해 문법입니다.
+// 뒤의 type에는 이 함수가 함께 받는 `initial`도 적어 전체 입력 모양을 보여 줍니다.
 export function redirectSystemPath({ path }: {
   path: string;
   initial: boolean;
 }): string {
-  // [FLOW-06 / 1단계] `initial` 여부와 관계없이 cold/warm system path를 같은 canonical 변환 함수로 보냅니다.
+  // [FLOW-06 / 1단계] 앱이 꺼져 있었든 이미 실행 중이었든 같은 함수로 주소를 바꿉니다.
   return rewriteIncomingSystemPath(path);
 }
+
+// =================================================================================================

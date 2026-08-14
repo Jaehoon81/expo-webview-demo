@@ -1,5 +1,10 @@
-// [파일 역할] 검증된 bridge request를 주입된 app 기능에 dispatch하고 모든 결과를 하나의 response envelope로 정규화합니다.
-// [검증 경계] 단위 test는 dependency spy와 response 계약을 확인하며 실제 권한 UI·알림·사진 picker·WebView 주입은 runtime 경계입니다.
+// [파일 역할] 검사한 bridge 요청에 맞는 앱 기능을 골라 실행하고, 결과를 항상 같은 응답 모양으로 만듭니다.
+// [검증 경계] 단위 test는 가짜 실행 함수가 어떻게 호출됐고 어떤 응답이 나왔는지만 확인합니다.
+// 실제 권한 화면, 알림, 사진 선택, WebView JavaScript 실행은 기기에서 확인해야 합니다.
+// [라이브러리] `ZodError`인지 확인해 입력 형식 오류와 기기 기능 오류를 서로 다른 문구로 바꿉니다.
+
+// ========================================== 외부 의존성 ==========================================
+
 import { ZodError } from "zod";
 
 import { parseBridgeRequest, readBridgeEnvelope } from "@/src/bridge/schema";
@@ -8,12 +13,18 @@ import type {
   BridgeResponse,
 } from "@/src/bridge/types";
 
+// =================================================================================================
+
+// ====================================== bridge 응답 helper =======================================
+
+// [역할] `success`는 action마다 다른 결과를 공통 성공 응답 모양으로 감쌉니다.
+// [문법] `T`에는 action마다 다른 result type이 들어갑니다. 그 값을 유지한 채 같은 성공 응답 모양을 만듭니다.
 function success<T>(
   uuid: string,
   action: string,
   result: T,
 ): BridgeResponse<T> {
-  // success/failure helper가 모든 action에서 uuid·action·isError 모양을 동일하게 유지합니다.
+  // 어느 action이 성공해도 uuid, action, result, isError 순서를 같은 모양으로 맞춥니다.
   return {
     uuid,
     action,
@@ -22,6 +33,8 @@ function success<T>(
   };
 }
 
+// 실패 응답의 result에는 사용자가 읽을 오류 문자열만 넣습니다.
+// [역할] `failure`는 입력 검사나 기기 기능 오류를 공통 실패 응답 모양으로 감쌉니다.
 function failure(
   uuid: string,
   action: string,
@@ -35,50 +48,65 @@ function failure(
   };
 }
 
+// =================================================================================================
+
+// ======================================= bridge dispatcher =======================================
+
+// [역할] `dispatchBridgeMessage`는 요청을 검사하고 action에 맞는 실행 함수를 부른 뒤 공통 응답을 돌려줍니다.
+// [문법] `async`를 사용해 바로 끝나는 화면 작업과 기다려야 하는 기기 작업을 모두 Promise 응답으로 맞춥니다.
 export async function dispatchBridgeMessage(
   message: string,
   dependencies: BridgeDependencies,
 ): Promise<BridgeResponse> {
-  // parse 전에 fallback envelope를 읽어 invalid params나 dependency 예외에도 요청 식별자를 돌려줄 수 있게 합니다.
+  // 전체 검사를 시작하기 전에 uuid와 action만 먼저 읽습니다. 나중에 실패해도 어느 요청인지 돌려주기 위해서입니다.
   const fallback = readBridgeEnvelope(message);
 
+  // 요청 검사와 실제 기능 실행을 같은 `try` 안에 둡니다. 어느 단계에서 실패해도 같은 실패 응답으로 바꿉니다.
   try {
     const request = parseBridgeRequest(message);
 
-    // [FLOW-05 / 5단계] discriminated union이 좁힌 action별 params를 대응 dependency에 전달하고 Promise 완료까지 기다립니다.
+    // [FLOW-05 / 5단계] action에 맞는 실행 함수에 params를 넘기고, Promise가 끝난 뒤 응답을 만듭니다.
+    // [문법] `switch`가 action별로 나누므로 각 `case` 안에서는 그 action에 맞는 params 모양을 사용할 수 있습니다.
     switch (request.action) {
       case "getDeviceUUID":
+        // UUID를 읽거나 새로 저장하는 작업이 끝난 뒤 그 문자열을 성공 결과에 넣습니다.
         return success(
           request.uuid,
           request.action,
           await dependencies.getDeviceUUID(),
         );
       case "showToastMessage":
+        // 함수가 바로 끝나면 다음 줄로 가고, Promise를 돌려주면 `await`가 끝날 때까지 기다립니다.
         await dependencies.showToastMessage(request.params[0]);
         return success(request.uuid, request.action, request.params[0]);
       case "showNotiMessage":
+        // Zod가 검사했으므로 첫 값은 알림 제목이고, 둘째 값은 있을 수도 있는 본문입니다.
         await dependencies.showNotiMessage(
           request.params[0],
           request.params[1],
         );
         return success(request.uuid, request.action, request.params[0]);
       case "reloadOtherTabs":
+        // 다른 탭을 새로 고친 뒤 WebView에 돌려줄 별도 값은 없어 빈 문자열을 넣습니다.
         await dependencies.reloadOtherTabs();
         return success(request.uuid, request.action, "");
       case "goToAnotherTab":
+        // dispatcher는 검사한 tag와 URL만 전달합니다. 실제 탭 이동과 URL 확인은 DemoShell이 맡습니다.
         await dependencies.goToAnotherTab(
           request.params[0],
           request.params[1],
         );
         return success(request.uuid, request.action, "");
       case "showBottomNaviView":
-        // 동기 React state setter도 다른 비동기 action과 같은 envelope로 즉시 완료합니다.
+        // React 상태를 바꾸는 함수는 바로 끝나지만 다른 action과 같은 성공 응답을 돌려줍니다.
         dependencies.setBottomNaviVisible(true);
         return success(request.uuid, request.action, "");
       case "hideBottomNaviView":
+        // 보이기와 숨기기는 같은 함수에 true 또는 false만 다르게 전달합니다.
         dependencies.setBottomNaviVisible(false);
         return success(request.uuid, request.action, "");
       case "getPhotoImages":
+        // 사진 선택과 크기 변경이 모두 끝난 배열을 한 번에 성공 결과로 보냅니다.
         return success(
           request.uuid,
           request.action,
@@ -86,7 +114,9 @@ export async function dispatchBridgeMessage(
         );
     }
   } catch (error) {
-    // Zod 오류는 내부 path를 노출하지 않고 사용자용 형식 오류로, 기기 기능 Error는 의도된 message로 변환합니다.
+    // Zod 오류의 자세한 내부 위치는 숨기고 쉬운 입력 형식 오류 문구로 바꿉니다.
+    // 기기 기능이 만든 일반 Error라면 그 message를 사용하고, 둘 다 아니면 알 수 없는 오류로 표시합니다.
+    // [문법] `instanceof`로 오류 종류를 하나씩 확인하고 중첩 삼항 연산자로 세 문구 중 하나를 고릅니다.
     const message =
       error instanceof ZodError
         ? "요청 형식 또는 Parameter 값이 올바르지 않습니다."
@@ -97,3 +127,5 @@ export async function dispatchBridgeMessage(
     return failure(fallback.uuid, fallback.action, message);
   }
 }
+
+// =================================================================================================

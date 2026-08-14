@@ -1,6 +1,12 @@
-// [파일 역할] 네이티브 tab의 사용자 Query 상태, 목록·pull-to-refresh UI와 parent가 호출하는 refetch handle을 소유합니다.
-// [FLOW-07] 사용자 API 흐름은 tab 활성화, Query/Axios 요청, Zod 정규화, cache 상태 render와 명시적 refetch로 이어집니다.
-// [검증 경계] test는 Query Hook과 Alert를 mock하므로 UI state·gesture 후처리는 확인하지만 실제 HTTP/cache timing·native gesture는 증명하지 않습니다.
+// [파일 역할] 사용자 목록을 보여 주는 네이티브 탭입니다. 처음 불러오기, 다시 불러오기, 당겨서 새로 고침, 성공·실패 안내를 관리합니다.
+// [FLOW-07] 탭이 처음 보이면 Query가 Axios로 사용자를 요청합니다. Zod 검사를 통과한 결과를 보관해 목록으로 보여 주며, 사용자가 원할 때 다시 요청합니다.
+// [검증 경계] test에서는 Query Hook과 Alert를 가짜로 바꿉니다.
+// 화면 변화와 손동작 뒤의 함수 호출은 확인하지만, 실제 HTTP 요청 시점과 휴대폰 손동작은 확인하지 못합니다.
+// [라이브러리] React의 effect, ref, callback은 탭 표시와 timer 값을 관리합니다.
+// React Native `FlatList`는 Query가 준 사용자를 스크롤 목록으로 보여 줍니다.
+
+// ========================================== 외부 의존성 ==========================================
+
 import {
   forwardRef,
   useCallback,
@@ -22,6 +28,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
+// [라이브러리] 이 custom Hook은 TanStack Query가 보관한 사용자와 요청 상태를 돌려줍니다. 화면은 Axios 요청과 Zod 검사 방법을 알 필요가 없습니다.
 import { useUsersQuery } from "@/src/api/users";
 import type { User } from "@/src/types/user";
 import {
@@ -29,26 +36,43 @@ import {
   type ScrollDirection,
 } from "@/src/utils/scroll-direction";
 
+// =================================================================================================
+
+// ======================================== 외부 type 계약 =========================================
+
 export type NativeUsersScreenHandle = {
+  // DemoShell에는 다시 불러오기 명령 두 개만 줍니다. Query 객체 전체는 이 component 안에 숨깁니다.
+  // [역할] `refetch`는 Query를 다시 요청하고 선택에 따라 결과 Alert까지 보여 주는 공개 함수 계약입니다.
   refetch: (showResultAlert?: boolean) => Promise<void>;
+  // [역할] `refetchIfActivated`는 사용자가 한 번이라도 연 탭에서만 다시 요청하는 공개 함수 계약입니다.
   refetchIfActivated: (showResultAlert?: boolean) => Promise<void>;
 };
 
+// active가 true이면 이 탭을 보여 주고 사용자 요청도 시작할 수 있습니다. bottomContentInset은 목록이 하단 탭 막대에 가리지 않을 여백입니다.
 type NativeUsersScreenProps = {
   active: boolean;
   bottomContentInset: number;
+  // [역할] `onScrollDirection`은 목록이 움직인 방향을 하단 탭 표시를 관리하는 DemoShell에 보내는 함수 계약입니다.
   onScrollDirection: (direction: ScrollDirection) => void;
 };
 
+// 당겨서 새로 고침한 결과를 Alert로 보여 주기 전까지 잠시 보관할 모양입니다.
 type RefreshResultAlert = {
   title: string;
   message: string;
 };
 
+// iOS에서는 손을 놓은 뒤 새로 고침 표시가 사라질 시간을 조금 기다렸다가 Alert를 띄웁니다.
 const IOS_PULL_REFRESH_ALERT_DELAY_MS = 300;
 
+// =================================================================================================
+
+// ======================================= UserRow component =======================================
+
+// [역할] `UserRow`는 검사된 사용자 한 명의 번호·이름·email을 목록의 한 줄로 보여 줍니다.
+// [문법] parameter의 `{ user }`는 props에서 user만 꺼내는 구조 분해입니다. 뒤의 type은 이 줄이 받을 값의 모양을 정합니다.
 function UserRow({ user }: { user: User }) {
-  // API 전체 object가 아니라 schema가 정규화한 id/name/email만 표시하는 순수 row component입니다.
+  // 사용자 한 명의 id, name, email만 보여 주는 줄입니다. Zod 검사를 마친 값만 받습니다.
   return (
     <View
       accessibilityLabel={`${user.name}, ${user.email}`}
@@ -69,6 +93,12 @@ function UserRow({ user }: { user: User }) {
   );
 }
 
+// =================================================================================================
+
+// ================================== NativeUsersScreen component ==================================
+
+// [역할] `NativeUsersScreen`은 사용자 Query 상태, 다시 요청, pull-to-refresh와 목록 화면을 함께 관리합니다.
+// [문법] `forwardRef<Handle, Props>`에서 첫 type은 DemoShell이 ref로 부를 명령이고, 둘째 type은 이 화면이 받을 props입니다.
 export const NativeUsersScreen = forwardRef<
   NativeUsersScreenHandle,
   NativeUsersScreenProps
@@ -76,63 +106,105 @@ export const NativeUsersScreen = forwardRef<
   { active, bottomContentInset, onScrollDirection },
   forwardedRef,
 ) {
-  // [FLOW-07 / 1단계] active=true인 동안만 Query를 enable해 앱 시작 시 보이지 않는 native tab의 요청을 지연합니다.
+
+  // ====================================== Query 상태와 ref =======================================
+
+  // [FLOW-07 / 1단계] active가 true일 때만 Query 요청을 허용합니다. 앱을 켰을 때 아직 보지 않은 네이티브 탭이 미리 요청하지 않게 합니다.
+  // 이 값은 Query가 지금 보관 중인 사용자와 요청 상태입니다. 탭을 숨겨도 component를 없애지 않으므로 같은 Query 결과를 계속 사용합니다.
+  // [역할] `useUsersQuery`는 현재 탭 활성 여부에 맞춰 사용자 요청 상태와 보관된 결과를 제공합니다.
   const usersQuery = useUsersQuery(active);
+  // 아래 ref들은 탭 방문 여부, 손동작, 늦게 띄울 Alert 값을 기억합니다. 값이 바뀌어도 그 이유만으로 화면을 다시 그리지는 않습니다.
+  // [역할] `scrollStartOffsetRef`는 현재 손동작이 시작된 세로 위치를 다음 scroll 방향 계산까지 기억합니다.
   const scrollStartOffsetRef = useRef(0);
+  // 첫 자동 요청 결과를 이미 Alert로 알렸는지 기억합니다. 같은 안내를 두 번 띄우지 않기 위한 값입니다.
+  // [역할] `handledInitialResultRef`는 첫 Query 결과 안내를 이미 보여 줬는지 기억합니다.
   const handledInitialResultRef = useRef(false);
+  // 사용자가 이 탭을 한 번이라도 열었는지 기억합니다. 열어 보지 않은 탭의 사용자 요청이 뒤에서 몰래 시작되는 일을 막습니다.
+  // [역할] `hasActivatedRef`는 이 탭을 한 번이라도 실제로 보여 준 적이 있는지 기억합니다.
   const hasActivatedRef = useRef(false);
+  // 첫 ref는 iOS에서 아직 손으로 당기는 중인지 기억합니다. 둘째 ref는 손을 놓은 뒤 보여 줄 결과를 잠시 보관합니다.
+  // [역할] `isDraggingRef`는 사용자가 아직 목록을 손으로 당기는 중인지 기억합니다.
   const isDraggingRef = useRef(false);
+  // [역할] `pendingPullRefreshAlertRef`는 iOS에서 손을 놓은 뒤 보여 줄 새로 고침 결과를 잠시 보관합니다.
   const pendingPullRefreshAlertRef = useRef<RefreshResultAlert | null>(null);
+  // [문법] `ReturnType<typeof setTimeout>`은 `setTimeout`이 돌려주는 값의 type을 직접 가져옵니다.
+  // 환경마다 timer 값의 type이 달라도 맞춰 줍니다.
+  // [역할] `pullRefreshAlertTimerRef`는 예약된 iOS 결과 Alert timer를 취소할 수 있도록 기억합니다.
   const pullRefreshAlertTimerRef = useRef<ReturnType<
     typeof setTimeout
   > | null>(null);
 
+  // ===============================================================================================
+
+  // ======================================= Query lifecycle =======================================
+
+  // [라이브러리] 이 `useEffect`는 시작할 때 할 일 없이 정리 함수만 등록합니다. component가 사라질 때 남아 있는 timer를 취소합니다.
+  // [역할] 바깥 `useEffect` callback은 component가 사라질 때 실행할 timer 정리 함수를 등록합니다.
+  // [역할] 안쪽 정리 callback은 화면이 사라진 뒤 늦은 iOS Alert가 뜨지 않도록 남은 timer를 취소합니다.
   useEffect(() => () => {
-    // iOS pull gesture 뒤 지연된 Alert가 unmount 후 나타나지 않도록 timer를 정리합니다.
+    // 화면이 사라진 뒤 늦은 Alert가 뜨지 않도록 iOS용 timer를 취소합니다.
     if (pullRefreshAlertTimerRef.current !== null) {
       clearTimeout(pullRefreshAlertTimerRef.current);
     }
+    // [문법] 빈 dependency 배열 `[]`은 이 effect를 component가 만들어질 때 한 번만 등록한다는 뜻입니다.
   }, []);
 
+  // active가 처음 true가 되면 사용자가 이 탭을 방문했다고 기록합니다.
+  // [역할] 이 `useEffect` callback은 탭이 보이는 첫 순간을 방문 여부 ref에 기록합니다.
   useEffect(() => {
     if (active) {
-      // 한 번이라도 실제 표시된 뒤에는 reloadOtherTabs가 이 tab의 cache를 refetch할 수 있습니다.
+      // 한 번 본 뒤부터는 bridge의 `reloadOtherTabs`가 이 탭의 사용자를 다시 요청할 수 있습니다.
       hasActivatedRef.current = true;
     }
   }, [active]);
 
+  // 첫 요청이 끝났고 탭도 보이는지 함께 확인합니다. 조건이 맞으면 첫 결과를 한 번만 Alert로 알립니다.
+  // [역할] 이 `useEffect` callback은 첫 사용자 요청이 끝난 뒤 성공 또는 실패 Alert를 한 번만 보여 줍니다.
   useEffect(() => {
     if (
       !active ||
       !usersQuery.isFetched ||
       handledInitialResultRef.current
     ) {
+      // 탭이 숨겨졌거나 요청 중이거나 이미 알렸다면 아무 Alert도 띄우지 않습니다.
       return;
     }
 
     handledInitialResultRef.current = true;
 
-    // 최초 active fetch 결과만 자동 Alert로 알리고 이후 결과는 사용자가 시작한 refetch 경로에서 알립니다.
+    // 탭을 처음 열어 받은 결과만 자동으로 알려 줍니다. 그다음 결과는 사용자가 다시 불러오기를 시작했을 때만 알려 줍니다.
     if (usersQuery.isError) {
+      // 실패했다면 Query가 정리해 둔 Error 문장을 첫 실패 Alert에 보여 줍니다.
       Alert.alert("사용자 조회 실패", usersQuery.error.message);
     } else {
       Alert.alert("사용자 조회 완료", "사용자 목록을 불러왔습니다.");
     }
+  // [문법] dependency 배열에는 이 effect가 읽는 active와 Query 상태를 모두 넣습니다. 이 가운데 값이 바뀌면 조건을 다시 확인합니다.
   }, [active, usersQuery.error, usersQuery.isError, usersQuery.isFetched]);
 
+  // ===============================================================================================
+
+  // ===================================== 다시 불러오기 함수 ======================================
+
+  // [라이브러리] `useCallback`으로 같은 Alert 함수를 이어서 씁니다. 실행 순간의 손동작과 대기 값은 ref에서 최신 값으로 읽습니다.
+  // [역할] `showPullRefreshResultAlert`는 iOS 손동작이 끝난 뒤 결과 Alert를 한 번만 예약합니다.
   const showPullRefreshResultAlert = useCallback((
     resultAlert: RefreshResultAlert,
   ) => {
-    // [FLOW-07 / 7단계] iOS는 drag 중 native refresh UI와 Alert가 경쟁하지 않도록 손을 놓은 뒤 짧게 지연합니다.
+    // [FLOW-07 / 7단계] iOS에서는 당기는 손을 놓은 뒤 잠깐 기다립니다. 새로 고침 표시가 사라지는 중에 Alert가 겹치지 않게 합니다.
     if (isDraggingRef.current) {
+      // 아직 당기는 중이면 결과만 저장합니다. timer와 Alert는 손을 놓기 전에는 시작하지 않습니다.
       pendingPullRefreshAlertRef.current = resultAlert;
       return;
     }
 
     if (pullRefreshAlertTimerRef.current !== null) {
+      // 먼저 예약한 Alert timer가 있으면 취소합니다. 새 결과와 이전 결과가 연달아 뜨지 않게 합니다.
       clearTimeout(pullRefreshAlertTimerRef.current);
     }
 
+    // timer가 끝나면 저장해 둔 결과와 timer 값을 먼저 비웁니다. 다음 새로 고침도 새 Alert를 예약할 수 있게 합니다.
+    // [역할] timer callback은 대기값을 비운 뒤 저장해 둔 새로 고침 결과 Alert를 보여 줍니다.
     pullRefreshAlertTimerRef.current = setTimeout(() => {
       pendingPullRefreshAlertRef.current = null;
       pullRefreshAlertTimerRef.current = null;
@@ -140,11 +212,13 @@ export const NativeUsersScreen = forwardRef<
     }, IOS_PULL_REFRESH_ALERT_DELAY_MS);
   }, []);
 
+  // [역할] `refetch`는 Query를 다시 요청하고 필요하면 즉시 또는 iOS 손동작 뒤 결과를 알려 줍니다.
+  // [문법] parameter 두 개에 default 값을 두어 같은 함수를 세 방식으로 부릅니다. 단순 재요청, 결과 안내, iOS용 늦은 안내에 함께 씁니다.
   const refetch = useCallback(async (
     showResultAlert = false,
     deferUntilPullGestureEnds = false,
   ) => {
-    // [FLOW-07 / 6단계] retry·재선택·pull-to-refresh가 공유하는 Query refetch와 결과 안내 경로입니다.
+    // [FLOW-07 / 6단계] 다시 시도, 현재 탭 다시 누르기, 당겨서 새로 고침이 모두 이 함수를 거쳐 Query를 다시 요청합니다.
     if (showResultAlert) {
       handledInitialResultRef.current = true;
     }
@@ -152,9 +226,11 @@ export const NativeUsersScreen = forwardRef<
     const result = await usersQuery.refetch();
 
     if (!showResultAlert) {
+      // showResultAlert가 false이면 Query가 보관한 값만 새로 바꾸고 Alert는 띄우지 않습니다.
       return;
     }
 
+    // [문법] ternary `조건 ? 실패값 : 성공값`으로 `isError`에 맞는 Alert 내용을 하나 고릅니다.
     const resultAlert = result.isError
       ? {
           title: "사용자 조회 실패",
@@ -166,16 +242,20 @@ export const NativeUsersScreen = forwardRef<
         };
 
     if (deferUntilPullGestureEnds) {
+      // iOS에서 당겨서 새로 고침한 경우에만 손을 놓았는지 확인한 뒤 Alert를 띄웁니다.
       showPullRefreshResultAlert(resultAlert);
     } else {
       Alert.alert(resultAlert.title, resultAlert.message);
     }
+  // [문법] 이 callback 안에서 `usersQuery.refetch`와 `showRefreshResult`를 쓰므로 dependency 배열에도 둘을 넣습니다.
   }, [showPullRefreshResultAlert, usersQuery]);
 
+  // bridge가 다른 탭을 새로 고칠 때 쓰는 함수입니다. 사용자가 아직 한 번도 열지 않은 이 탭은 요청하지 않습니다.
+  // [역할] `refetchIfActivated`는 방문한 적이 있는 탭에서만 공통 `refetch`를 실행합니다.
   const refetchIfActivated = useCallback(async (
     showResultAlert = false,
   ) => {
-    // background WebView의 reloadOtherTabs 요청이 사용자가 아직 열지 않은 native tab의 첫 API call을 몰래 시작하지 않게 합니다.
+    // 다른 WebView의 `reloadOtherTabs` 때문에 보지 않은 네이티브 탭의 첫 API 요청이 시작되는 일을 막습니다.
     if (!hasActivatedRef.current) {
       return;
     }
@@ -183,15 +263,28 @@ export const NativeUsersScreen = forwardRef<
     await refetch(showResultAlert);
   }, [refetch]);
 
+  // ===============================================================================================
+
+  // ===================================== DemoShell 공개 명령 =====================================
+
+  // [라이브러리] `useImperativeHandle`은 DemoShell의 ref에 위의 다시 불러오기 함수 두 개만 넣어 줍니다.
+  // [역할] `useImperativeHandle` factory는 DemoShell이 사용할 두 다시 요청 명령 객체를 만듭니다.
   useImperativeHandle(
     forwardedRef,
     () => ({ refetch, refetchIfActivated }),
     [refetch, refetchIfActivated],
   );
 
+  // ===============================================================================================
+
+  // ==================================== scroll과 화면 helper =====================================
+
+  // [역할] `handleScroll`은 현재 목록 위치와 손동작 시작 위치로 방향을 구해 DemoShell에 알립니다.
   const handleScroll = (
     event: NativeSyntheticEvent<NativeScrollEvent>,
   ): void => {
+    // [문법] `NativeSyntheticEvent<NativeScrollEvent>`는 event에 들어 있을 값의 모양을 정합니다.
+    // 그래서 TypeScript는 `nativeEvent.contentOffset`이 있다는 것을 알 수 있습니다.
     const currentOffset = event.nativeEvent.contentOffset.y;
     const direction = getScrollDirection(
       scrollStartOffsetRef.current,
@@ -199,18 +292,26 @@ export const NativeUsersScreen = forwardRef<
     );
 
     if (direction) {
-      // [FLOW-08 / 관련 코드] FlatList도 WebView와 같은 pure direction helper를 사용해 shell에 신호만 전달합니다.
+      // [FLOW-08 / 관련 코드] FlatList도 WebView와 같은 계산 함수로 스크롤 방향을 구합니다. 구한 방향만 DemoShell에 알립니다.
       onScrollDirection(direction);
     }
   };
 
+  // loading 화면과 오류 화면도 하단 탭 막대에 가리지 않도록 아래 여백을 남깁니다.
+  // [역할] `centeredContentStyle`은 상태 화면의 아래쪽에 하단 탭 높이를 포함한 여백을 더합니다.
   const centeredContentStyle = [
     styles.centered,
     { paddingBottom: bottomContentInset + 24 },
   ];
 
+  // ===============================================================================================
+
+  // ======================================= Query 화면 출력 =======================================
+
+  // [역할] `renderContent`는 Query 상태에 맞는 loading·오류·빈 목록·사용자 목록 중 하나를 만듭니다.
   const renderContent = () => {
-    // [FLOW-07 / 5단계] 하나의 Query result를 pending, error/retry, empty, success list UI로 분기합니다.
+    // [FLOW-07 / 5단계] Query 상태에 따라 불러오는 중, 오류와 다시 시도, 빈 목록, 사용자 목록 가운데 하나를 보여 줍니다.
+    // [문법] 각 early return은 해당 화면을 돌려준 뒤 함수를 바로 끝냅니다. 여러 상태 화면이 한꺼번에 겹치지 않습니다.
     if (usersQuery.isPending) {
       return (
         <View
@@ -225,7 +326,7 @@ export const NativeUsersScreen = forwardRef<
     }
 
     if (usersQuery.isError) {
-      // [FLOW-09 / 관련 코드] network banner가 사라져도 실패한 Query는 자동 복구하지 않고 이 retry button을 기다립니다.
+      // [FLOW-09 / 관련 코드] 인터넷 연결 안내가 사라져도 실패한 요청을 자동으로 다시 보내지 않습니다. 사용자가 이 버튼을 눌러야 다시 요청합니다.
       return (
         <View accessibilityRole="alert" style={centeredContentStyle}>
           <Ionicons color="#DC2626" name="alert-circle-outline" size={42} />
@@ -234,6 +335,8 @@ export const NativeUsersScreen = forwardRef<
           <Pressable
             accessibilityRole="button"
             onPress={() => {
+              // [역할] 오류 화면의 `onPress` callback은 사용자 요청을 다시 보내고 완료 결과도 알려 줍니다.
+              // [문법] 앞의 `void`는 Pressable의 함수가 Promise를 밖으로 돌려주지 않는다는 뜻입니다. `refetchUsers`의 비동기 작업은 그대로 시작합니다.
               void refetch(true);
             }}
             style={styles.retryButton}
@@ -244,10 +347,14 @@ export const NativeUsersScreen = forwardRef<
       );
     }
 
+    // [라이브러리] `FlatList`는 data의 각 사용자를 한 줄씩 보여 줍니다. 당겨서 새로 고침과 스크롤 event도 callback으로 알려 줍니다.
+    // `keyExtractor`는 숫자인 사용자 id를 React가 목록 항목을 구별할 문자열 key로 바꿉니다.
     return (
       <FlatList
         data={usersQuery.data}
+        // [역할] `keyExtractor` callback은 사용자 숫자 id를 React가 구별할 문자열 key로 바꿉니다.
         keyExtractor={(item) => String(item.id)}
+        // [역할] `renderItem` callback은 사용자 한 명을 `UserRow` component로 바꿉니다.
         renderItem={({ item }) => <UserRow user={item} />}
         contentContainerStyle={[
           styles.listContent,
@@ -260,16 +367,23 @@ export const NativeUsersScreen = forwardRef<
             <Text style={styles.statusText}>표시할 사용자가 없습니다.</Text>
           </View>
         }
+        // [역할] `ItemSeparatorComponent` callback은 사용자 줄 사이에 둘 빈 간격 View를 만듭니다.
         ItemSeparatorComponent={() => <View style={styles.separator} />}
         refreshing={usersQuery.isRefetching}
         onRefresh={() => {
+          // [역할] `onRefresh` callback은 pull-to-refresh 요청을 시작하고 운영체제에 맞는 Alert 시점을 선택합니다.
+          // iOS에서는 손을 놓은 뒤 Alert를 띄우고, Android에서는 다시 불러오기가 끝나면 바로 띄웁니다.
           void refetch(true, Platform.OS === "ios");
         }}
         onScrollBeginDrag={(event) => {
+          // [역할] `onScrollBeginDrag` callback은 손동작 시작 여부와 시작 위치를 ref에 기록합니다.
+          // 당기기 시작한 세로 위치를 저장합니다. 이어지는 `onScroll`에서 움직인 방향을 계산할 기준입니다.
           isDraggingRef.current = true;
           scrollStartOffsetRef.current = event.nativeEvent.contentOffset.y;
         }}
         onScrollEndDrag={() => {
+          // [역할] `onScrollEndDrag` callback은 손을 놓았다고 기록하고 기다리던 iOS 결과 Alert를 예약합니다.
+          // 손을 놓았다고 먼저 기록합니다. 기다리던 결과가 있으면 300ms 뒤 Alert를 띄우도록 예약합니다.
           isDraggingRef.current = false;
 
           if (pendingPullRefreshAlertRef.current !== null) {
@@ -284,6 +398,12 @@ export const NativeUsersScreen = forwardRef<
     );
   };
 
+  // ===============================================================================================
+
+  // ======================================== tab 화면 출력 ========================================
+
+  // [역할] `NativeUsersScreen`의 return은 component를 유지한 채 active 값으로 표시·입력만 전환합니다.
+  // 다른 탭으로 가도 이 component와 Query 연결을 없애지 않고 화면만 숨깁니다. 받아 둔 사용자와 방문 여부를 그대로 유지합니다.
   return (
     <View
       accessibilityElementsHidden={!active}
@@ -302,8 +422,16 @@ export const NativeUsersScreen = forwardRef<
       <View style={styles.content}>{renderContent()}</View>
     </View>
   );
+
+  // ===============================================================================================
+
 });
 
+// =================================================================================================
+
+// ========================================== 화면 style ===========================================
+
+// 아래 style은 숨긴 탭, 제목, 목록, 상태 화면의 위치와 모양만 정합니다. Query와 손동작 관련 값은 위 Hook과 ref가 관리합니다.
 const styles = StyleSheet.create({
   container: {
     ...StyleSheet.absoluteFillObject,
@@ -421,3 +549,5 @@ const styles = StyleSheet.create({
     height: 10,
   },
 });
+
+// =================================================================================================

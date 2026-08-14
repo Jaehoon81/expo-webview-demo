@@ -1,7 +1,16 @@
-// [파일 역할] deep link parsing, HTTPS 정규화와 일반/popup WebView URL의 처리 주체를 결정하는 순수 routing 정책입니다.
-// [검증 경계] 반환 decision의 분류는 unit test로 확인하지만 실제 외부 앱 존재·WebView navigation 성공은 실기기 경계입니다.
+// [파일 역할] 들어온 주소를 읽어 WebView, 앱 안 탭, popup, OS 외부 앱 중 어디에서 처리할지 정합니다.
+// [검증 경계] unit test는 주소가 어느 종류로 나뉘는지만 확인합니다.
+// 실제 외부 앱이 설치됐는지, WebView가 페이지를 열었는지는 기기에서 확인해야 합니다.
+// [문법] `import type`은 TypeScript 검사에만 쓰고, 일반 import의 `isTabIndex`는 앱 실행 중 값 검사에 씁니다.
+
+// ========================================== 외부 의존성 ==========================================
+
 import type { TabIndex } from "@/src/types/navigation";
 import { isTabIndex } from "@/src/types/navigation";
+
+// =================================================================================================
+
+// ======================================= URL type과 기준값 =======================================
 
 export const LOCAL_WEB_BASE_URL = "https://local.webviewappdemo/";
 
@@ -10,6 +19,7 @@ export type DemoDeepLink = {
   targetUrl: string | null;
 };
 
+// [문법] 각 결과에 고정된 `type` 문자열을 넣었습니다. `switch`에서 type을 확인하면 함께 있는 값도 자동으로 정해집니다.
 export type NavigationDecision =
   | { type: "allow" }
   | { type: "ignore" }
@@ -22,6 +32,7 @@ export type PopupDecision =
   | { type: "external"; url: string }
   | { type: "popup"; url: string };
 
+// [라이브러리] `Set`은 protocol 전체가 목록에 있는지 확인합니다. 일부 글자만 우연히 같은 주소는 허용하지 않습니다.
 const EXTERNAL_CONTACT_SCHEMES = new Set([
   "tel:",
   "sms:",
@@ -31,22 +42,33 @@ const EXTERNAL_CONTACT_SCHEMES = new Set([
 
 const SOCIAL_HOSTS = ["instagram.com", "facebook.com", "twitter.com"];
 
+// [역할] `isHostOrSubdomain`은 host가 지정 domain 자체이거나 그 아래의 올바른 하위 domain인지 확인합니다.
 function isHostOrSubdomain(hostname: string, domain: string): boolean {
+  // 주소가 domain과 정확히 같거나 `.` 뒤의 하위 domain일 때만 true입니다. `notinstagram.com`은 제외됩니다.
   return hostname === domain || hostname.endsWith(`.${domain}`);
 }
 
+// =================================================================================================
+
+// ==================================== URL 정규화와 deep link =====================================
+
+// [역할] `normalizeHttpsUrl`은 scheme이 없는 host에 HTTPS를 붙이고 실제 HTTPS 주소만 문자열로 돌려줍니다.
 export function normalizeHttpsUrl(value: string): string | null {
-  // scheme이 없는 host는 HTTPS를 보완하지만 명시적 HTTP나 다른 scheme을 HTTPS로 강제 변환하지 않습니다.
+  // `m.nate.com`처럼 scheme이 없을 때만 HTTPS를 붙입니다. 이미 HTTP나 다른 scheme이면 억지로 바꾸지 않습니다.
+  // [라이브러리] `trim`은 앞뒤 공백만 지웁니다. 주소 안쪽 공백은 URL 검사가 잘못된 주소로 거부합니다.
   const trimmed = value.trim();
   if (!trimmed) {
     return null;
   }
 
+  // [문법] 정규식은 문자열 맨 앞에 `https:` 같은 scheme이 있는지 확인합니다.
+  // 삼항 연산자는 scheme이 없을 때만 `https://`를 붙입니다.
   const candidate = /^[a-z][a-z\d+.-]*:/i.test(trimmed)
     ? trimmed
     : `https://${trimmed}`;
 
   try {
+    // [라이브러리] 표준 `URL`이 주소 문법과 protocol을 확인하고 일정한 모양의 문자열로 바꿉니다.
     const url = new URL(candidate);
     return url.protocol === "https:" ? url.toString() : null;
   } catch {
@@ -54,9 +76,11 @@ export function normalizeHttpsUrl(value: string): string | null {
   }
 }
 
+// [역할] `parseDemoDeepLink`는 custom scheme이나 Expo Go 주소에서 검사된 탭 번호와 선택 URL을 꺼냅니다.
 export function parseDemoDeepLink(value: string): DemoDeepLink | null {
+  // 외부 문자열이 잘못돼도 오류를 밖으로 던지지 않고 `null`을 돌려줍니다.
   try {
-    // [FLOW-06 / 4단계] development build custom scheme과 Expo Go `/--/` path를 같은 내부 값으로 parse합니다.
+    // [FLOW-06 / 4단계] development build 주소와 Expo Go의 `/--/` 주소를 같은 탭 이동 값으로 읽습니다.
     const url = new URL(value);
     const isCustomScheme =
       url.protocol === "mywebviewapp:" && url.hostname === "webviewappdemo";
@@ -68,22 +92,25 @@ export function parseDemoDeepLink(value: string): DemoDeepLink | null {
       return null;
     }
 
+    // [라이브러리] `URLSearchParams.get`은 값이 없으면 null을 돌려줘 빈 문자열과 구분할 수 있습니다.
     const targetValue = url.searchParams.get("target");
     if (targetValue === null) {
       return null;
     }
 
+    // [문법] `Number`로 query 문자열을 숫자로 바꿉니다. 이것만으로 0~3이라고 믿지는 않습니다.
     const targetNumber = Number(targetValue);
-    // query는 문자열이므로 number 변환 뒤 0~3 integer runtime guard를 다시 거칩니다.
+    // 주소의 값은 원래 문자열이므로 숫자로 바꾼 뒤 정수 0~3인지 `isTabIndex`로 다시 확인합니다.
     if (!isTabIndex(targetNumber)) {
       return null;
     }
 
     const rawTargetUrl = url.searchParams.get("url");
+    // [문법] 이동할 URL이 없으면 `null`을 유지하고, 있으면 HTTPS 주소로 바꿀 수 있는지 확인합니다.
     const targetUrl =
       rawTargetUrl === null ? null : normalizeHttpsUrl(rawTargetUrl);
 
-    // URL이 제공됐다면 HTTPS로 정규화 가능한 값만 허용해 bridge/deep link가 HTTP를 우회하지 못하게 합니다.
+    // URL이 함께 왔다면 올바른 HTTPS 주소만 허용합니다. deep link로 HTTP 차단 규칙을 피해 갈 수 없습니다.
     if (rawTargetUrl !== null && targetUrl === null) {
       return null;
     }
@@ -97,8 +124,13 @@ export function parseDemoDeepLink(value: string): DemoDeepLink | null {
   }
 }
 
+// =================================================================================================
+
+// =================================== WebView와 popup URL 분류 ====================================
+
+// [역할] `classifyNavigationUrl`은 일반 WebView URL을 허용·차단·앱 이동·외부 앱 처리 중 하나로 나눕니다.
 export function classifyNavigationUrl(url: string): NavigationDecision {
-  // WebView 내부 문서 생성·빈 문서는 통과시키고 외부 network scheme 정책과 구분합니다.
+  // WebView가 내부에서 만드는 빈 문서와 data/blob 문서는 허용합니다. 외부 인터넷 주소와 따로 처리합니다.
   if (
     url === "about:blank" ||
     url.startsWith("data:") ||
@@ -107,14 +139,15 @@ export function classifyNavigationUrl(url: string): NavigationDecision {
     return { type: "allow" };
   }
 
+  // 일반 주소를 나누기 전에 이 앱의 deep link인지 먼저 확인해 앱 안 탭 이동으로 보냅니다.
   const deepLink = parseDemoDeepLink(url);
   if (deepLink) {
-    // [FLOW-06 / 6단계] WebView에서 누른 자체 scheme은 WebView load를 중단하고 app tab 이동으로 되돌립니다.
+    // [FLOW-06 / 6단계] WebView에서 앱 전용 주소를 누르면 웹 페이지 열기를 막고 앱 탭을 이동합니다.
     return { type: "deep-link", value: deepLink };
   }
 
   try {
-    // [FLOW-03 / 3단계] scheme을 parse해 HTTPS 허용, HTTP 차단, 연락처/기타 scheme 외부 위임으로 분류합니다.
+    // [FLOW-03 / 3단계] scheme을 읽어 HTTPS는 허용하고 HTTP는 막습니다. 연락처 등은 OS 앱에 맡깁니다.
     const parsed = new URL(url);
 
     if (parsed.protocol === "https:") {
@@ -122,10 +155,11 @@ export function classifyNavigationUrl(url: string): NavigationDecision {
     }
 
     if (parsed.protocol === "http:") {
-      // cleartext HTTP는 WebView와 외부 앱 양쪽으로 넘기지 않고 caller가 차단 안내를 표시합니다.
+      // 암호화되지 않은 HTTP는 WebView에도 OS 앱에도 넘기지 않습니다. 이 결과를 받은 화면이 안내를 띄웁니다.
       return { type: "block-http", url };
     }
 
+    // [라이브러리] `Set.has`로 tel, sms, mailto, facetime 중 정확히 하나인지 확인해 OS 앱으로 보냅니다.
     if (EXTERNAL_CONTACT_SCHEMES.has(parsed.protocol)) {
       return { type: "external", url };
     }
@@ -140,24 +174,30 @@ export function classifyNavigationUrl(url: string): NavigationDecision {
   }
 }
 
+// [역할] `classifyPopupUrl`은 새 창 URL을 원래 탭·외부 앱·앱 안 popup 처리 중 하나로 나눕니다.
 export function classifyPopupUrl(url: string): PopupDecision {
   try {
-    // [FLOW-04 / 2단계] 새 창 target을 기존 부모 tab, OS 외부 앱, app 내부 popup 중 하나로 분류합니다.
+    // [FLOW-04 / 2단계] 새 창 주소를 현재 탭, OS 외부 앱, 앱 안 popup 중 하나로 나눕니다.
     const parsed = new URL(url);
+    // host를 소문자로 바꿔 대문자 사용으로 주소 규칙을 피해 가지 못하게 합니다.
     const hostname = parsed.hostname.toLowerCase();
 
+    // [문법] `some`은 소셜 domain 목록 중 하나라도 현재 host와 맞으면 바로 true를 돌려줍니다.
+    // [역할] 첫 `some` callback은 현재 host가 소셜 domain 하나와 같은 계열인지 차례로 확인합니다.
     if (SOCIAL_HOSTS.some((domain) => isHostOrSubdomain(hostname, domain))) {
       return { type: "external", url };
     }
 
+    // local HTML 주소와 세 mobile 사이트는 새 popup 대신 현재 WebView에서 이어 엽니다.
     const isKnownParentUrl =
       url.startsWith(LOCAL_WEB_BASE_URL) ||
+      // [역할] 둘째 `some` callback은 현재 host가 원래 탭에서 이어 열 mobile site인지 확인합니다.
       ["m.naver.com", "m.daum.net", "m.nate.com"].some((domain) =>
         isHostOrSubdomain(hostname, domain),
       );
 
     if (isKnownParentUrl) {
-      // 참고 앱의 로컬/주요 mobile host는 별도 modal을 만들지 않고 source WebView history에 이어 엽니다.
+      // 참고 앱과 같은 주요 mobile 주소는 별도 창을 만들지 않고 현재 WebView 방문 기록에 이어 엽니다.
       return { type: "parent", url };
     }
 
@@ -170,3 +210,5 @@ export function classifyPopupUrl(url: string): PopupDecision {
     return { type: "external", url };
   }
 }
+
+// =================================================================================================

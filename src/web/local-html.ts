@@ -1,7 +1,25 @@
-// [파일 역할] 첫 WebView에 주입되는 학습용 HTML·CSS·JavaScript와 8개 bridge action 버튼을 한 문서로 제공합니다.
-// [FLOW-05] bridge 흐름은 이 문서의 postMessage에서 시작해 Zod/dispatcher/기기 service를 거쳐 calledByNative callback으로 돌아옵니다.
-// [FLOW-05 / 1단계] `sendNative`가 uuid·action·선택 params를 JSON 문자열로 만들어 ReactNativeWebView에 전달합니다.
-// [주의] 아래 template literal 내부는 실제 WebView payload입니다. 설명용 TypeScript 주석을 문자열 안에 넣거나 escaping을 바꾸지 않습니다.
+// [파일 역할] 첫 WebView에 넣을 학습용 웹 문서입니다. HTML·CSS·JavaScript와 bridge 버튼 8개가 들어 있습니다.
+// [FLOW-05] 웹 문서가 요청을 보내면 앱이 검사하고 기기 기능을 실행한 뒤 `calledByNative`로 결과를 돌려줍니다.
+// [FLOW-05 / 1단계] `sendNative`는 uuid, action, params를 JSON 문자열로 만들어 ReactNativeWebView에 보냅니다.
+// [주의] 아래 backtick 안쪽은 설명용 글이 아니라 WebView가 실제로 실행할 웹 문서입니다.
+// 안쪽에 TypeScript 설명 주석을 넣거나 따옴표와 공백을 바꾸면 앱 동작이 달라질 수 있습니다.
+// [문법] backtick을 쓰면 여러 줄의 HTML 전체를 JavaScript 문자열 하나로 담을 수 있습니다.
+// [라이브러리] WebTab은 이 문자열을 WebView의 `{ html, baseUrl }`에 넣습니다.
+// 문자열 안의 JavaScript는 React Native 쪽이 아니라 WebView 안의 웹 페이지에서 실행됩니다.
+
+// =================================== WebView payload 함수 역할 ===================================
+
+// [역할] `getUuidV4`는 웹 쪽 bridge 요청을 서로 구분할 임시 UUID 문자열을 만듭니다.
+// [역할] `sendNative`는 action과 params를 요청 객체로 만들고 React Native 앱에 문자열로 보냅니다.
+// [역할] `openPopupWindow`는 popup 처리 흐름을 확인할 Bing 새 창 요청을 만듭니다.
+// [역할] `showMobileType`은 WebView user agent를 읽어 Android, iOS 또는 알 수 없는 기기로 안내합니다.
+// [역할] `calledByNative`는 앱이 돌려준 응답을 읽고 오류·UUID·사진 결과를 웹 문서에 표시합니다.
+// [주의] 위 역할 설명은 payload 밖에 둡니다. 아래 문자열 안에 설명 주석을 넣으면 WebView에 전달되는 값이 바뀝니다.
+
+// =================================================================================================
+
+// ===================================== WebView HTML payload ======================================
+
 export const LOCAL_DEMO_HTML = `<!doctype html>
 <html lang="ko">
   <head>
@@ -227,4 +245,6 @@ export const LOCAL_DEMO_HTML = `<!doctype html>
     </section>
   </body>
 </html>`;
-// [FLOW-05 / 8단계] payload 안의 calledByNative가 response를 parse해 error를 알리고 UUID 또는 최대 두 사진을 web DOM에 반영합니다.
+// [FLOW-05 / 8단계] 웹 문서의 `calledByNative`가 응답을 읽고 오류, UUID, 또는 사진 두 장을 화면에 표시합니다.
+
+// =================================================================================================

@@ -1,6 +1,13 @@
-// [파일 역할] 일반 tab과 분리된 full-screen modal WebView의 URL/history, progress, 오류와 close/back lifecycle을 소유합니다.
-// [FLOW-04] popup 흐름은 window.open URL 분류 뒤 modal을 열고 내부 navigation을 유지하다 history back 또는 close로 끝납니다.
-// [검증 경계] test는 WebView 대역과 layout prop을 확인하며 실제 popup page load·safe area·gesture·외부 앱 전환은 실기기 경계입니다.
+// [파일 역할] 새 창으로 열 주소를 화면 전체 modal WebView에 보여 줍니다. 그 안의 방문 기록, 진행률, 오류, 닫기를 관리합니다.
+// [FLOW-04] 웹 페이지가 `window.open`을 부르면 URL 종류를 확인한 뒤 modal을 엽니다.
+// 사용자는 modal 안에서 뒤로 가거나 modal을 닫을 수 있습니다.
+// [검증 경계] test에서는 WebView를 가짜로 바꾸고 화면에 건넨 값을 확인합니다.
+// 실제 웹 페이지 열기, 화면 가장자리 여백, 손동작, 외부 앱 전환은 실기기에서 확인해야 합니다.
+// [라이브러리] React의 ref, effect, state는 modal이 열린 동안 필요한 값을 관리합니다.
+// React Native `Modal`은 기존 화면 위에 별도의 휴대폰 화면 영역을 만듭니다.
+
+// ========================================== 외부 의존성 ==========================================
+
 import {
   forwardRef,
   useEffect,
@@ -18,6 +25,7 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+// [라이브러리] Expo Linking은 WebView가 열지 않을 scheme을 휴대폰에 설치된 다른 앱으로 보냅니다.
 import * as Linking from "expo-linking";
 import {
   SafeAreaProvider,
@@ -31,18 +39,34 @@ import {
 } from "@/src/services/url-router";
 import { NetworkStatusBanner } from "@/src/components/NetworkStatusBanner";
 
+// =================================================================================================
+
+// ======================================== 외부 type 계약 =========================================
+
 export type PopupWebViewHandle = {
+  // DemoShell에는 popup 안에서 뒤로 갔는지만 알려 줍니다. 실제 WebView 객체는 이 파일 밖으로 내보내지 않습니다.
+  // [역할] `goBack`은 popup 방문 기록을 실제로 이동했는지 boolean으로 알려 주는 공개 함수 계약입니다.
   goBack: () => boolean;
 };
 
+// DemoShell이 URL을 주면 modal을 열고, null을 주면 닫습니다. 따라서 이 값 하나가 modal의 열림과 닫힘을 함께 나타냅니다.
 type PopupWebViewProps = {
   url: string | null;
+  // [역할] `onClose`는 popup을 닫고 뒤 화면의 하단 탭을 복구해 달라고 DemoShell에 알리는 함수 계약입니다.
   onClose: () => void;
+  // [역할] `classifyNavigation`은 popup 안의 URL을 WebView·앱 탭·외부 앱 처리로 나누는 함수 계약입니다.
   classifyNavigation: (url: string) => NavigationDecision;
+  // [역할] `onDeepLink`는 popup 안에서 누른 앱 전용 주소를 DemoShell의 탭 이동으로 전달하는 함수 계약입니다.
   onDeepLink: (url: string) => void;
   networkOffline: boolean;
 };
 
+// =================================================================================================
+
+// ==================================== PopupWebView component =====================================
+
+// [역할] `PopupWebView`는 modal WebView 하나의 URL·방문 기록·loading·오류와 닫기 동작을 관리합니다.
+// [문법] 줄이 나뉘어 있어도 `forwardRef<Handle, Props>` 한 표현입니다. 첫 type은 ref 명령, 둘째 type은 props 모양을 정합니다.
 export const PopupWebView = forwardRef<
   PopupWebViewHandle,
   PopupWebViewProps
@@ -56,25 +80,51 @@ export const PopupWebView = forwardRef<
   },
   forwardedRef,
 ) {
+
+  // ===================================== WebView 상태와 ref ======================================
+
+  // 첫 ref는 실제 WebView 명령을 부를 때 씁니다. 둘째 ref는 뒤로 갈 기록이 있는지 기억하며, 값이 바뀌어도 화면을 다시 그리지 않습니다.
+  // [역할] `webViewRef`는 popup WebView의 뒤로 가기와 다시 불러오기 명령을 부를 객체를 보관합니다.
   const webViewRef = useRef<WebView>(null);
+  // [역할] `canGoBackRef`는 popup 안에 뒤로 갈 방문 기록이 있는지 최신 값을 기억합니다.
   const canGoBackRef = useRef(false);
+  // currentUrl은 지금 modal이 보여 주는 주소입니다. popup 안에서 다시 `window.open`이 불리면 modal을 더 만들지 않고 이 주소만 바꿉니다.
+  // [역할] `currentUrl` state는 현재 popup WebView가 열 주소 또는 닫힌 상태의 `null`을 보관합니다.
   const [currentUrl, setCurrentUrl] = useState<string | null>(url);
+  // key가 바뀌면 이전 WebView와 방문 기록을 버리고 새 WebView를 만듭니다. DemoShell이 새 URL을 줄 때 사용합니다.
+  // [역할] `webViewKey` state는 새 popup URL마다 이전 방문 기록을 버린 WebView를 다시 만들게 합니다.
   const [webViewKey, setWebViewKey] = useState(0);
+  // progress는 주소를 여는 정도이고, errorMessage는 실패 안내입니다. 새 URL을 받으면 둘 다 처음 값으로 되돌립니다.
+  // [역할] `progress` state는 현재 popup 문서를 얼마나 불러왔는지 진행 표시줄에 제공합니다.
   const [progress, setProgress] = useState(0);
+  // [역할] `errorMessage` state는 popup URL 열기 실패 문장 또는 오류 없음의 `null`을 보관합니다.
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  // ===============================================================================================
+
+  // ================================= popup lifecycle과 공개 명령 =================================
+
+  // [라이브러리] `useEffect`는 DemoShell이 준 `url`이 바뀐 뒤 실행됩니다. 새 URL에 맞춰 modal 안의 값을 다시 준비합니다.
+  // [역할] `useEffect` callback은 새 popup URL이나 닫힘 값에 맞춰 방문 기록·오류·WebView key를 초기화합니다.
   useEffect(() => {
-    // [FLOW-04 / 4단계] parent의 url이 열림·교체·닫힘으로 바뀔 때 popup history와 오류를 새 session으로 초기화합니다.
+    // [FLOW-04 / 4단계] DemoShell의 url이 바뀌면 이전 popup의 방문 기록과 오류를 버립니다. 열기, 다른 URL로 바꾸기, 닫기를 모두 여기서 처리합니다.
     canGoBackRef.current = false;
     setCurrentUrl(url);
     setErrorMessage(null);
+    // [문법] `setWebViewKey((value) => value + 1)`은 React가 가진 최신 key에 1을 더합니다. 새 key 때문에 WebView도 새로 만들어집니다.
+    // [역할] state updater callback은 가장 최신 WebView key에 1을 더해 새 popup WebView를 요청합니다.
     setWebViewKey((current) => current + 1);
   }, [url]);
 
+  // [라이브러리] `useImperativeHandle`로 DemoShell에는 `goBack` 명령 하나만 줍니다.
+  // 명령은 뒤로 갔으면 true, 갈 수 없으면 false를 바로 돌려줍니다.
+  // [역할] `useImperativeHandle` factory는 DemoShell이 사용할 popup 뒤로 가기 명령 객체를 만듭니다.
   useImperativeHandle(forwardedRef, () => ({
-    // Android hardware back이 modal 내부 history를 먼저 소비할 수 있도록 동기 성공 여부를 공개합니다.
+    // Android의 기기 뒤로 가기 버튼이 먼저 popup 방문 기록을 확인할 수 있도록 결과를 바로 알려 줍니다.
+    // [역할] `goBack`은 방문 기록이 있을 때만 popup WebView를 뒤로 보내고 성공 여부를 돌려줍니다.
     goBack() {
       if (!canGoBackRef.current) {
+        // false이면 popup 안에서 뒤로 갈 수 없다는 뜻입니다. DemoShell은 modal 닫기처럼 다음 동작을 이어서 합니다.
         return false;
       }
       webViewRef.current?.goBack();
@@ -82,18 +132,30 @@ export const PopupWebView = forwardRef<
     },
   }));
 
+  // ===============================================================================================
+
+  // ======================================= URL 처리 helper =======================================
+
+  // 다른 앱으로 URL을 보내지 못한 경우는 웹 페이지 오류와 다릅니다. 그래서 popup 오류 화면 대신 Alert로 바로 알려 줍니다.
+  // [역할] `openExternalUrl`은 URL을 OS의 다른 앱으로 보내고 실패하면 공통 Alert를 보여 줍니다.
   const openExternalUrl = (targetUrl: string) => {
+    // [문법] 앞의 `void`는 이곳에서 Promise 결과값을 돌려주지 않는다는 뜻입니다. 실패한 경우만 `.catch`에서 Alert로 보여 줍니다.
+    // [역할] 실패 처리 callback은 외부 앱이 URL을 열지 못한 경우 사용자에게 Alert로 알려 줍니다.
     void Linking.openURL(targetUrl).catch(() => {
       Alert.alert("외부 앱 실행 실패", "요청한 링크를 열 수 없습니다.");
     });
   };
 
+  // [역할] `shouldStartRequest`는 popup 안의 URL 분류를 실행하고 WebView가 계속 열어도 되는지 돌려줍니다.
   const shouldStartRequest = (targetUrl: string): boolean => {
-    // [FLOW-04 / 5단계] popup 안의 후속 URL도 일반 WebView와 같은 HTTPS/deep-link/external 정책을 다시 적용합니다.
+    // [FLOW-04 / 5단계] popup 안에서 다른 URL로 이동할 때도 다시 검사합니다. HTTPS, 앱 deep link, 외부 앱 URL을 같은 규칙으로 나눕니다.
     const decision = classifyNavigation(targetUrl);
 
+    // [문법] `switch (decision.type)`은 type 값에 맞는 경우 하나를 고릅니다.
+    // 각 case 안에서는 그 경우에 있는 `url` 또는 `value`를 안전하게 쓸 수 있습니다.
     switch (decision.type) {
       case "allow":
+        // HTTPS처럼 WebView가 직접 열어도 되는 경우에만 true를 돌려줍니다.
         return true;
       case "ignore":
         return false;
@@ -104,6 +166,7 @@ export const PopupWebView = forwardRef<
         );
         return false;
       case "deep-link":
+        // 이 앱의 deep link이면 DemoShell에 탭 이동을 요청합니다. popup WebView는 그 URL을 열지 않습니다.
         onDeepLink(targetUrl);
         return false;
       case "external":
@@ -112,24 +175,35 @@ export const PopupWebView = forwardRef<
     }
   };
 
+  // [역할] `handleOpenWindow`는 popup 안의 새 창 URL을 외부 앱으로 보내거나 현재 popup 주소로 바꿉니다.
   const handleOpenWindow = (targetUrl: string) => {
-    // popup 내부의 또 다른 window.open은 modal을 중첩하지 않고 외부 앱 또는 현재 popup URL로 평탄화합니다.
+    // popup 안에서 또 `window.open`이 불려도 modal을 하나 더 만들지 않습니다. 외부 앱으로 보내거나 현재 popup 주소를 바꿉니다.
     const decision = classifyPopupUrl(targetUrl);
 
     if (decision.type === "external") {
+      // 다른 앱에서 열 주소나 HTTPS가 아닌 주소는 현재 WebView에 넣지 않습니다.
       openExternalUrl(decision.url);
       return;
     }
 
+    // 원래 탭에서 열었든 popup 안에서 열었든, 내부 웹 주소라면 현재 popup의 source만 바꿉니다.
     setCurrentUrl(decision.url);
   };
 
+  // ===============================================================================================
+
+  // ======================================= modal 화면 출력 =======================================
+
+  // [역할] `PopupWebView`의 return은 modal header, WebView, 진행률과 오류 복구 화면을 하나로 만듭니다.
+  // [라이브러리] `Modal`의 `visible`이 true이면 화면을 엽니다. Android 기기 뒤로 가기 버튼을 누르면 `onRequestClose`가 불립니다.
   return (
     <Modal
       animationType="slide"
       onRequestClose={() => {
-        // [FLOW-04 / 6단계] OS back은 popup history가 있으면 한 단계 이동하고 없을 때만 modal session을 닫습니다.
+        // [역할] `onRequestClose` callback은 popup 방문 기록을 먼저 뒤로 보내고 기록이 없을 때만 modal을 닫습니다.
+        // [FLOW-04 / 6단계] 기기 뒤로 가기를 누르면 먼저 popup 안에서 한 페이지 뒤로 갑니다. 뒤로 갈 기록이 없을 때만 modal을 닫습니다.
         if (!canGoBackRef.current) {
+          // popup 안에 뒤로 갈 기록이 없으면 DemoShell의 닫기 함수를 부릅니다. 그 함수가 url을 null로 바꿉니다.
           onClose();
         } else {
           webViewRef.current?.goBack();
@@ -139,7 +213,9 @@ export const PopupWebView = forwardRef<
       visible={url !== null}
     >
       <SafeAreaProvider>
-        {/* Modal은 root provider와 별도 native tree이므로 자체 provider에서 top inset을 다시 계산합니다. */}
+        {/* [라이브러리]
+            Modal은 기존 화면과 별도의 화면 영역에 만들어집니다.
+            `SafeAreaProvider`를 안에 한 번 더 두어 상단 상태 표시줄에 가리지 않을 여백을 다시 계산합니다. */}
         <SafeAreaView edges={["top"]} style={styles.safeArea}>
           <NetworkStatusBanner visible={networkOffline} />
 
@@ -149,6 +225,8 @@ export const PopupWebView = forwardRef<
               accessibilityRole="button"
               hitSlop={10}
               onPress={() => {
+                // [역할] header 뒤로 가기 callback은 popup 방문 기록을 이동하고 기록이 없으면 안내를 보여 줍니다.
+                // 위쪽 뒤로 가기 버튼은 popup의 방문 기록만 이동합니다. 뒤로 갈 곳이 없으면 Alert로 알려 줍니다.
                 if (canGoBackRef.current) {
                   webViewRef.current?.goBack();
                 } else {
@@ -185,7 +263,9 @@ export const PopupWebView = forwardRef<
           ) : null}
 
           <View style={styles.webContent}>
-          {/* native 기본 오류 UI를 비우고 아래 app errorContent 한 곳에서 retry/close를 제공합니다. */}
+          {/* [라이브러리]
+              WebView가 기본으로 보여 주는 오류 화면은 비웁니다.
+              대신 아래 앱 오류 화면에서 다시 시도와 닫기 버튼을 함께 보여 줍니다. */}
           {currentUrl ? (
             <WebView
               key={webViewKey}
@@ -209,36 +289,60 @@ export const PopupWebView = forwardRef<
               mixedContentMode="never"
               webviewDebuggingEnabled={__DEV__}
               startInLoadingState
+
+              // ------------------------------- WebView load와 이동 -------------------------------
+
+              // [역할] `renderLoading` callback은 popup 문서를 여는 동안 보여 줄 가운데 loading 화면을 만듭니다.
               renderLoading={() => (
                 <View style={styles.loading}>
                   <ActivityIndicator size="large" />
                 </View>
               )}
+              // [역할] `renderError` callback은 native 기본 오류 화면 대신 빈 View를 돌려 앱 오류 화면만 남깁니다.
               renderError={() => <View />}
               onLoadStart={() => {
+                // [역할] `onLoadStart` callback은 새 popup URL을 열기 시작할 때 진행률을 0으로 되돌립니다.
+                // 현재 WebView가 새 주소를 열기 시작할 때마다 진행률을 0으로 되돌립니다.
                 setProgress(0);
               }}
               onLoadProgress={(event) => {
+                // [역할] `onLoadProgress` callback은 WebView가 알려 준 진행률을 화면 state에 저장합니다.
                 setProgress(event.nativeEvent.progress);
               }}
               onNavigationStateChange={(navigationState) => {
+                // [역할] `onNavigationStateChange` callback은 popup의 최신 뒤로 가기 가능 여부를 ref에 저장합니다.
+                // WebView가 알려 준 뒤로 가기 가능 여부를 ref에 저장합니다. 위쪽 버튼과 기기 뒤로 가기가 이 값을 바로 읽습니다.
                 canGoBackRef.current = navigationState.canGoBack;
               }}
+              // [역할] `onShouldStartLoadWithRequest` callback은 새 URL을 공통 popup navigation 규칙으로 검사합니다.
               onShouldStartLoadWithRequest={(request) =>
                 shouldStartRequest(request.url)
               }
               onOpenWindow={(event) => {
+                // [역할] `onOpenWindow` callback은 popup 안의 새 창 URL을 현재 popup 또는 외부 앱 처리로 전달합니다.
+                // popup 안의 `window.open`도 위와 같은 URL 규칙으로 처리합니다. 새 modal을 겹쳐 만들지는 않습니다.
                 handleOpenWindow(event.nativeEvent.targetUrl);
               }}
+
+              // -----------------------------------------------------------------------------------
+
+              // -------------------------------- WebView 오류 감지 --------------------------------
+
               onError={(event) => {
-                // [FLOW-09 / 관련 코드] popup도 전역 offline banner와 별도로 실제 navigation 오류를 보관합니다.
+                // [역할] `onError` callback은 popup URL 열기 실패 문장을 앱 오류 화면 state에 저장합니다.
+                // [FLOW-09 / 관련 코드] 위쪽 offline banner와 별개로, popup에서 실제 URL 열기에 실패한 내용은 이 component가 보관합니다.
                 setErrorMessage(event.nativeEvent.description);
               }}
               onHttpError={(event) => {
+                // [역할] `onHttpError` callback은 HTTP 상태 코드와 설명을 같은 popup 오류 문장으로 저장합니다.
+                // HTTP 상태 코드와 WebView 설명을 한 문장으로 합쳐 같은 오류 화면에 보여 줍니다.
                 setErrorMessage(
                   `HTTP ${event.nativeEvent.statusCode}: ${event.nativeEvent.description}`,
                 );
               }}
+
+              // -----------------------------------------------------------------------------------
+
             />
           ) : null}
 
@@ -252,6 +356,8 @@ export const PopupWebView = forwardRef<
                 <Pressable
                   accessibilityRole="button"
                   onPress={() => {
+                    // [역할] 다시 시도 callback은 오류를 지우고 현재 popup URL을 같은 WebView에서 다시 불러옵니다.
+                    // 사용자가 다시 시도를 누르면 오류 안내를 지우고 현재 주소를 WebView에서 다시 엽니다.
                     setErrorMessage(null);
                     webViewRef.current?.reload();
                   }}
@@ -274,8 +380,17 @@ export const PopupWebView = forwardRef<
       </SafeAreaProvider>
     </Modal>
   );
+
+  // ===============================================================================================
+
 });
 
+// =================================================================================================
+
+// ========================================== 화면 style ===========================================
+
+// 아래 style은 화면 전체 modal 안에서 header, 진행 표시줄, WebView, 오류 안내를 어디에 놓을지 정합니다.
+// 열린 동안의 값은 위 state와 ref가 관리합니다.
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
@@ -370,3 +485,5 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 });
+
+// =================================================================================================
