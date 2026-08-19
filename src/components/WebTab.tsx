@@ -1,5 +1,6 @@
 // [파일 역할] WebView 탭 하나를 화면에 띄우고, 그 탭에서 연 웹 문서와 방문 기록을 관리합니다.
-// [FLOW-03] WebView가 URL을 열려고 하면 먼저 허용 여부를 확인합니다.
+// [FLOW-03] 시작: React가 `source`를 native WebView에 전달하거나 기존 document에 이동 명령을 보내면 navigation 흐름이 시작됩니다.
+// [FLOW-04] 시작: web document의 `window.open` 또는 `_blank` link를 native WebView가 감지하면 새 창 분류 흐름이 시작됩니다.
 // 열린 뒤에는 방문 기록과 오류 화면을 관리하며, 실패하면 다시 시도하거나 첫 화면으로 돌아갑니다.
 // [검증 경계] component test에서는 WebView를 가짜로 바꿉니다. 따라서 props와 callback 연결만 확인합니다.
 // 실제 iOS·Android WebView의 방문 기록과 인터넷 연결은 확인하지 못합니다.
@@ -126,7 +127,7 @@ export const WebTab = forwardRef<WebTabHandle, WebTabProps>(function WebTab(
 
   // ----------------------------------------- 화면 state ------------------------------------------
 
-  // [FLOW-03 / 1단계] source와 reloadKey는 어떤 웹 문서를 열지 정합니다.
+  // [FLOW-03 / 1단계] `WebTab` render는 `initialSource`로 `source`를 만들고 state·ref를 해당 WebView session의 기준값으로 준비합니다.
   // ref는 방문 기록과 스크롤 값을 기억하고, state는 화면에 보일 진행률과 오류를 관리합니다.
   // [역할] `useState<WebViewSource>`는 현재 WebView가 열 source를 보관하고 변경합니다.
   // [문법] `useState<WebViewSource>`는 source에 WebView가 알아듣는 값만 넣을 수 있게 type을 정합니다.
@@ -155,7 +156,7 @@ export const WebTab = forwardRef<WebTabHandle, WebTabProps>(function WebTab(
   // [라이브러리] `useCallback`은 화면을 다시 그려도 같은 함수 객체를 이어서 쓰게 합니다. ref 명령과 Promise `.then`이 불필요하게 바뀌지 않도록 합니다.
   // [역할] `injectBridgeResponse`는 앱의 bridge 응답을 안전한 JavaScript 호출문으로 만들어 WebView에 실행시킵니다.
   const injectBridgeResponse = useCallback((response: BridgeResponse) => {
-    // [FLOW-05 / 7단계] bridge 응답을 WebView 안의 JavaScript 함수에 전달합니다.
+    // [FLOW-05 / 17단계] `.then`이 이 함수를 호출하면 응답 객체를 두 번 직렬화하고 `injectJavaScript` 명령을 native WebView에 보냅니다.
     // 따옴표나 script 문자가 실행할 코드를 망가뜨리지 않도록 두 번 문자열로 바꿉니다.
     // 첫 `JSON.stringify`는 응답 객체를 JSON 글로 만듭니다. 두 번째는 그 글을 JavaScript 문자열 안에 안전하게 넣을 수 있게 만듭니다.
     const serializedResponse = JSON.stringify(response);
@@ -192,7 +193,8 @@ export const WebTab = forwardRef<WebTabHandle, WebTabProps>(function WebTab(
 
   // [역할] `reloadInitial`은 오류와 방문 기록 값을 초기화하고 최초 source의 새 WebView를 만들도록 준비합니다.
   const reloadInitial = useCallback(() => {
-    // [FLOW-02 / 6단계] 사용자가 현재 탭을 다시 누르면 오류와 방문 기록 값을 지웁니다. key도 바꿔 첫 source부터 새 WebView로 엽니다.
+    // [FLOW-02 / 9-B단계] `reloadInitial()`은 오류·history·load ref를 초기화하고 `reloadKey`를 증가시킵니다.
+    // [FLOW-03 / 2-C단계] 새 key와 최초 `source`를 요청하므로 현재 navigation session은 끝나고 stage 1의 새 WebView로 돌아갑니다.
     setLoadError(null);
     canGoBackRef.current = false;
     canGoForwardRef.current = false;
@@ -221,6 +223,7 @@ export const WebTab = forwardRef<WebTabHandle, WebTabProps>(function WebTab(
         setLoadError(null);
 
         if (hasLoadedDocumentRef.current) {
+          // [FLOW-03 / 2-B단계] 준비된 document가 있으면 `location.assign(url)`을 주입해 같은 native instance와 history에서 이동합니다.
           // 웹 문서가 이미 열려 있으면 `location.assign`을 실행합니다. 같은 WebView를 쓰므로 기존 뒤로 가기 기록이 남습니다.
           const serializedUrl = JSON.stringify(url);
           // `JSON.stringify`로 URL의 따옴표를 안전하게 처리합니다. 끝의 `true;`는 WebView가 실행 결과를 분명하게 받도록 붙입니다.
@@ -230,11 +233,13 @@ export const WebTab = forwardRef<WebTabHandle, WebTabProps>(function WebTab(
           return;
         }
 
+        // [FLOW-03 / 2-A단계] 아직 완료 callback을 받은 document가 없으면 `setSource({ uri })`가 다음 React render의 최초 native load를 정합니다.
         // 첫 웹 문서가 열리기 전에는 JavaScript를 실행할 대상이 없습니다. 대신 source에 URL을 넣어 WebView가 그 주소로 시작하게 합니다.
         setSource({ uri: url });
       },
       // [역할] `goBack`은 뒤로 갈 기록이 있을 때 WebView를 한 페이지 뒤로 이동시킵니다.
       goBack() {
+        // [FLOW-03 / 14-C단계] toolbar나 Android back caller가 이 명령을 부르면 최신 ref를 검사해 가능한 경우 native `goBack()`을 실행합니다.
         // 뒤로 갈 방문 기록이 있을 때만 WebView에 명령을 보냅니다. 없으면 false를 돌려 DemoShell이 앱 종료 같은 다음 처리를 할 수 있게 합니다.
         if (!canGoBackRef.current) {
           return false;
@@ -244,6 +249,7 @@ export const WebTab = forwardRef<WebTabHandle, WebTabProps>(function WebTab(
       },
       // [역할] `goForward`는 앞으로 갈 기록이 있을 때 WebView를 한 페이지 앞으로 이동시킵니다.
       goForward() {
+        // [FLOW-03 / 14-D단계] iOS forward caller도 최신 ref를 검사해 가능한 경우 native `goForward()`를 실행하고 새 navigation event를 기다립니다.
         // 앞으로 가기도 저장해 둔 방문 기록 값을 먼저 확인합니다. 갈 수 없으면 WebView에 명령을 보내지 않습니다.
         if (!canGoForwardRef.current) {
           return false;
@@ -277,16 +283,21 @@ export const WebTab = forwardRef<WebTabHandle, WebTabProps>(function WebTab(
       style={[styles.container, !active && styles.inactive]}
       testID={`web-tab-${tag}`}
     >
+      {/* [FLOW-02 / 5-A단계] React는 inactive WebTab도 unmount하지 않고 이 wrapper의 표시·입력·접근성만 바꿉니다. */}
       {progress > 0 && progress < 1 ? (
         <View style={styles.progressTrack}>
           <View style={[styles.progressValue, { width: `${progress * 100}%` }]} />
         </View>
       ) : null}
 
-      {/* [FLOW-03 / 2단계] [라이브러리]
+      {/* [FLOW-03 / 2단계] WebTab render가 아래 기능·callback props를 구성하고 `source`·`key`와 함께 stage 3의 native WebView에 전달합니다.
+          [라이브러리]
           아래 props는 JavaScript, 웹 저장소, cookie, 새 창처럼 이 WebView에서 사용할 기능을 정합니다.
           `originWhitelist={["*"]}`는 모든 scheme을 먼저 이 WebView callback으로 보냅니다.
           실제로 열지는 `onShouldStartLoadWithRequest`가 돌려주는 true 또는 false로 정합니다. */}
+      {/* [FLOW-02 / 10-B단계] React는 증가한 `reloadKey`를 다른 identity로 보고 이전 WebView를 unmount한 뒤 최초 source의 새 instance를 mount합니다. */}
+      {/* [FLOW-03 / 4-B단계] Android 최초 `source` load는 `onShouldStartLoadWithRequest`를 생략하므로 이 앱이 직접 만든 initial source가 바로 native load로 진행합니다. */}
+      {/* [FLOW-03 / 3단계] React가 이 `key`와 `source`를 native WebView에 commit하면 platform이 해당 URL request를 시작합니다. */}
       <WebView
         key={reloadKey}
         ref={webViewRef}
@@ -319,16 +330,20 @@ export const WebTab = forwardRef<WebTabHandle, WebTabProps>(function WebTab(
 
         // [역할] `onLoadStart`는 새 URL을 열기 시작할 때 진행률을 처음 값으로 되돌립니다.
         onLoadStart={() => {
+          // [FLOW-03 / 8단계] 허용된 load가 시작되면 native event를 받은 library가 이 prop을 자동 호출하고 progress를 0으로 돌립니다.
           // 새 주소를 열기 시작하면 이전 진행률을 0으로 되돌립니다.
           setProgress(0);
         }}
         // [역할] `onLoadProgress`는 WebView가 알려 준 진행률을 화면 state에 저장합니다.
         onLoadProgress={(event) => {
+          // [FLOW-03 / 9-B단계] load 중 native progress event마다 이 callback이 반복 호출되어 표시줄 state를 0~1 값으로 갱신합니다.
           // WebView가 보내는 0부터 1 사이 진행률을 state에 넣어 위 표시줄의 너비를 바꿉니다.
           setProgress(event.nativeEvent.progress);
         }}
         // [역할] `onLoad`는 iOS에서 새 문서가 실제로 열리면 임시 scroll 차단을 해제합니다.
         onLoad={() => {
+          // [FLOW-03 / 10-A단계] native load 성공 시 library가 먼저 `onLoad`를 호출해 iOS error-recovery scroll 차단을 해제합니다.
+          // [FLOW-09 / 9-A단계] 수동 retry 뒤 이 success callback이 와야 WebView recovery가 실제로 확인되며 banner 변화만으로는 실행되지 않습니다.
           // [라이브러리] iOS에서 `onLoad`가 오면 새 웹 문서가 실제로 열렸다는 뜻입니다. 이때 임시로 무시하던 scroll event를 다시 받습니다.
           if (Platform.OS === "ios") {
             iosErrorRecoveryRef.current = false;
@@ -336,13 +351,16 @@ export const WebTab = forwardRef<WebTabHandle, WebTabProps>(function WebTab(
         }}
         // [역할] `onLoadEnd`는 첫 문서가 준비됐다고 기록하고 진행률을 완료 값으로 바꿉니다.
         onLoadEnd={() => {
+          // [FLOW-03 / 11-A단계] 성공 path에서는 같은 finish event의 다음 callback인 `onLoadEnd`가 document 준비 ref와 progress를 완료합니다.
+          // [FLOW-03 / 11-B단계] 일반 load 실패 path에서도 library가 `onError` 다음에 이 callback을 호출하므로 같은 완료값을 기록합니다.
           // 첫 문서를 다 연 뒤부터 `loadUrl`은 source를 새로 만들지 않습니다. 현재 WebView 안에서 이동해 방문 기록을 이어 갑니다.
           hasLoadedDocumentRef.current = true;
           setProgress(1);
         }}
         // [역할] `onNavigationStateChange`는 뒤로·앞으로 가기 가능 여부의 최신 값을 저장합니다.
         onNavigationStateChange={(navigationState) => {
-          // [FLOW-03 / 5단계] WebView가 알려 준 뒤로 가기·앞으로 가기 가능 여부를 ref에 저장합니다. toolbar와 Android back은 이 값을 바로 확인합니다.
+          // [FLOW-03 / 9-A단계] library는 `onLoadStart` 뒤 같은 시작 navigation 값을 이 prop에 전달해 history ref를 갱신합니다.
+          // [FLOW-03 / 12-A단계] 성공 시에는 `onLoad`와 `onLoadEnd` 뒤 완료 navigation 값으로 같은 ref를 한 번 더 갱신합니다.
           canGoBackRef.current = navigationState.canGoBack;
           canGoForwardRef.current = navigationState.canGoForward;
         }}
@@ -353,7 +371,9 @@ export const WebTab = forwardRef<WebTabHandle, WebTabProps>(function WebTab(
 
         // [역할] `onMessage`는 웹 문서의 bridge 요청을 DemoShell로 보내고 완료된 응답을 다시 WebView에 넣습니다.
         onMessage={(event) => {
-          // [FLOW-05 / 2단계] WebView가 보낸 문자열 message를 DemoShell에 전달합니다. 처리가 끝난 응답은 다시 이 탭의 WebView로 보냅니다.
+          // [FLOW-05 / 3단계] web page가 `postMessage`를 호출하면 native bridge가 이 `onMessage` prop을 자동 호출해 같은 문자열을 `data`로 줍니다.
+          // [FLOW-05 / 4단계] callback은 `onBridgeMessage(data)`를 호출하고 반환된 Promise에 response consumer인 `.then`을 등록합니다.
+          // [FLOW-05 / 16단계] 그 Promise가 `BridgeResponse`로 fulfilled되면 `.then`이 `injectBridgeResponse(response)`를 호출합니다.
           // [문법] 앞의 `void`는 이 event callback이 Promise를 밖으로 돌려주지 않는다는 뜻입니다. `.then`은 응답을 받은 뒤에만 WebView로 보내게 합니다.
           void onBridgeMessage(event.nativeEvent.data).then(
             injectBridgeResponse,
@@ -361,12 +381,15 @@ export const WebTab = forwardRef<WebTabHandle, WebTabProps>(function WebTab(
         }}
         // [역할] `onShouldStartLoadWithRequest`는 URL을 열어도 되는지 DemoShell의 판단 결과를 WebView에 돌려줍니다.
         onShouldStartLoadWithRequest={(request) =>
+          // [FLOW-03 / 4-A단계] Android 최초 load를 제외한 navigation 요청에서 library가 이 prop을 호출하면 URL을 parent policy에 보내고 boolean을 native에 반환합니다.
+          // [FLOW-06 / 1-B단계] 요청 URL이 app scheme일 수도 있으므로 같은 callback이 WebView deep-link 입력의 시작점도 됩니다.
           // 이 파일은 URL을 직접 판단하지 않습니다. DemoShell이 검사한 뒤 알려 주는 true 또는 false만 WebView에 돌려줍니다.
           onNavigationRequest(request.url)
         }
         // [역할] `onOpenWindow`는 웹 문서가 새 창으로 열려는 URL을 DemoShell에 전달합니다.
         onOpenWindow={(event) => {
-          // [FLOW-04 / 관련 코드] 웹 페이지가 `window.open`을 부르면 여기서 새 화면을 만들지 않습니다. URL과 현재 탭 번호를 DemoShell에 넘깁니다.
+          // [FLOW-04 / 1단계] `window.open`을 감지한 `react-native-webview`가 이 prop을 자동 호출하고 `targetUrl`을 event로 전달합니다.
+          // [FLOW-04 / 2단계] 이 callback은 새 화면을 만들지 않고 `onOpenWindow(targetUrl)`을 호출해 parent로 올립니다.
           onOpenWindow(event.nativeEvent.targetUrl);
         }}
 
@@ -376,6 +399,7 @@ export const WebTab = forwardRef<WebTabHandle, WebTabProps>(function WebTab(
 
         // [역할] `onScroll`은 스크롤 방향을 계산하고 현재 탭의 유효한 움직임만 DemoShell에 알립니다.
         onScroll={(event) => {
+          // [FLOW-08 / 1-A단계] native WebView가 scroll event를 보내면 library가 이 prop을 자동 호출하고 현재 offset을 전달합니다.
           // scroll event에서 현재 세로 위치만 꺼냅니다. 직전 위치와 함께 계산 함수에 보내 움직인 방향을 구합니다.
           const currentOffset = event.nativeEvent.contentOffset.y;
           const direction = getScrollDirection(
@@ -390,7 +414,7 @@ export const WebTab = forwardRef<WebTabHandle, WebTabProps>(function WebTab(
             (loadError !== null || iosErrorRecoveryRef.current);
 
           if (active && direction && !ignoreIosErrorScroll) {
-            // [FLOW-08 / 2단계] 지금 보이는 WebView에서 사용자가 충분히 스크롤했을 때만 그 방향을 DemoShell에 알립니다.
+            // [FLOW-08 / 3-A단계] helper 결과가 있고 active이며 iOS recovery가 아닐 때만 `onScrollDirection(direction)`을 호출합니다.
             onScrollDirection(direction);
           }
         }}
@@ -401,8 +425,9 @@ export const WebTab = forwardRef<WebTabHandle, WebTabProps>(function WebTab(
 
         // [역할] `onError`는 WebView가 URL을 열지 못한 내용을 앱 오류 화면에 저장합니다.
         onError={(event) => {
-          // [FLOW-03 / 6단계] WebView가 주소를 열지 못하면 기본 오류 페이지 대신 앱의 오류 안내에 쓸 내용을 저장합니다. iOS에서는 하단 탭 막대도 다시 보이게 합니다.
-          // [FLOW-09 / 관련 코드] 위쪽 offline banner는 휴대폰 연결 상태만 알려 줍니다. 실제 웹 주소 열기 실패 내용은 이 탭이 따로 보관합니다.
+          // [FLOW-03 / 10-B단계] native load 실패 시 library가 이 callback을 호출하고, 기본 error UI를 막은 뒤 app error state를 만듭니다.
+          // [FLOW-08 / 1-F단계] iOS 오류 branch는 recovery ref를 켜고 active 탭의 `onScrollDirection("up")`도 호출해 하단 탭을 복구합니다.
+          // [FLOW-09 / 6-A단계] 이 `loadError`는 network banner와 별개인 실제 WebView request 결과로 이 탭에 남습니다.
           event.preventDefault();
           preserveBottomBarDuringIosErrorRecovery();
           setLoadError({
@@ -412,6 +437,7 @@ export const WebTab = forwardRef<WebTabHandle, WebTabProps>(function WebTab(
         }}
         // [역할] `onHttpError`는 HTTP 상태 코드 오류를 같은 앱 오류 화면 모양으로 저장합니다.
         onHttpError={(event) => {
+          // [FLOW-03 / 10-C단계] native WebView가 HTTP error status를 받으면 이 별도 callback이 app error state를 만들며 일반 finish event는 이어질 수 있습니다.
           // HTTP 상태 코드 오류도 같은 오류 안내 화면에 보여 줍니다. iOS에서 scroll event를 잠시 무시하는 처리도 함께 시작합니다.
           preserveBottomBarDuringIosErrorRecovery();
           setLoadError({
@@ -425,6 +451,8 @@ export const WebTab = forwardRef<WebTabHandle, WebTabProps>(function WebTab(
 
       />
 
+      {/* [FLOW-03 / 13-A단계] 종료(성공): finish callback 뒤 `loadError`가 없으면 준비된 document와 최신 history ref를 유지합니다. */}
+      {/* [FLOW-02 / 11-B단계] 종료(Web 재선택): 새 WebView mount 뒤의 실제 page lifecycle은 FLOW-03에 넘깁니다. */}
       {loadError ? (
         <View
           accessibilityRole="alert"
@@ -433,14 +461,15 @@ export const WebTab = forwardRef<WebTabHandle, WebTabProps>(function WebTab(
           <Text style={styles.errorTitle}>{loadError.title}</Text>
           <Text style={styles.errorDescription}>{loadError.description}</Text>
           <View style={styles.errorActions}>
-            {/* [FLOW-03 / 7단계]
+            {/* [FLOW-03 / 13-B단계] 종료(실패 대기): React가 error overlay를 보여 주고 사용자의 retry 또는 초기화 입력을 기다립니다.
                 다시 시도는 실패한 현재 URL을 다시 엽니다.
                 초기 화면은 방문 기록을 버리고 이 탭의 첫 source부터 새로 엽니다. */}
             <Pressable
               accessibilityRole="button"
               onPress={() => {
                 // [역할] 다시 시도 callback은 오류를 지우고 현재 WebView URL을 다시 불러옵니다.
-                // [FLOW-09 / 5단계] 인터넷 연결이 돌아와도 자동으로 다시 열지 않습니다. 사용자가 이 버튼을 눌렀을 때 현재 URL을 다시 엽니다.
+                // [FLOW-03 / 14-A단계] 사용자가 `다시 시도`를 누르면 error를 지우고 native `reload()`를 호출해 load callback 흐름으로 되돌아갑니다.
+                // [FLOW-09 / 8-A단계] 연결 복구만으로는 실행되지 않으며 이 명시적 press가 현재 URL request를 다시 시작합니다.
                 preserveBottomBarDuringIosErrorRecovery();
                 setLoadError(null);
                 webViewRef.current?.reload();
@@ -453,6 +482,7 @@ export const WebTab = forwardRef<WebTabHandle, WebTabProps>(function WebTab(
               accessibilityRole="button"
               onPress={() => {
                 // [역할] 초기 화면 callback은 방문 기록을 버리고 이 탭의 최초 source로 돌아갑니다.
+                // [FLOW-03 / 14-B단계] 사용자가 `초기 화면`을 누르면 `reloadInitial()`을 거쳐 새 key의 stage 1로 되돌아갑니다.
                 // 초기 화면 버튼도 iOS의 임시 scroll event를 먼저 막습니다. 그 뒤 WebView key를 바꿔 새 WebView를 만듭니다.
                 preserveBottomBarDuringIosErrorRecovery();
                 reloadInitial();

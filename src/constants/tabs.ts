@@ -28,7 +28,7 @@ export type TabDefinition = {
 
 // [문법] `readonly`는 이 배열을 사용하는 코드가 `push`나 `splice`로 탭 순서를 바꾸지 못하게 합니다.
 export const TAB_DEFINITIONS: readonly TabDefinition[] = [
-  // [FLOW-02 / 관련 코드] DemoShell과 BottomTabBar가 같은 배열을 읽어 화면 순서와 ref 번호를 맞춥니다.
+  // [FLOW-02 / 2단계] `DemoShell`과 `BottomTabBar`가 이 같은 배열을 읽어 화면, 버튼, ref의 index·tag 순서를 맞춥니다.
   {
     index: 0,
     tag: "f0",

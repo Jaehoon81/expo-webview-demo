@@ -24,10 +24,11 @@ export function NetworkStatusBanner({
 }: NetworkStatusBannerProps) {
   // [문법] 보일 필요가 없으면 `null`을 return합니다. 이때 React는 안내 View를 만들지 않습니다.
   if (!visible) {
+    // [FLOW-09 / 5-B단계] online 또는 UNKNOWN branch는 `null`을 반환해 banner만 unmount하고 기존 request 결과는 유지합니다.
     return null;
   }
 
-  // [FLOW-09 / 3단계] 연결 상태가 NONE일 때만 안내를 만듭니다. 개별 웹/API 요청 성공 여부를 판단하지는 않습니다.
+  // [FLOW-09 / 5-A단계] confirmed offline branch는 accessibility alert banner를 mount하지만 개별 request 성공 여부는 판단하지 않습니다.
   // [라이브러리] `accessibilityLiveRegion="polite"`와 alert role은 새 안내를 화면 읽기 도구가 읽게 합니다.
   return (
     <View

@@ -12,7 +12,7 @@ export function getScrollDirection(
 ): ScrollDirection | null {
   // `null`은 아직 방향을 정할 만큼 움직이지 않았다는 뜻입니다. 맨 위로 돌아온 경우는 먼저 따로 처리합니다.
   if (currentOffset <= 0 && previousOffset > 0) {
-    // [FLOW-08 / 1단계] 목록이 맨 위로 돌아오면 이동 거리가 작아도 하단 탭을 다시 보여 줍니다.
+    // [FLOW-08 / 2-A단계] helper는 top 복귀를 즉시 `up`, 8px 미만을 `null`, 나머지를 delta 부호의 `up/down`으로 반환합니다.
     return "up";
   }
 

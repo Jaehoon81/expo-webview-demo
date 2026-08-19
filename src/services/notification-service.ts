@@ -110,13 +110,14 @@ export async function showDemoNotification(
   title: string,
   body?: string,
 ): Promise<void> {
-  // [FLOW-05 / 관련 코드] channel 준비 → 권한 확인 → 이전 예약 취소 → 새 알림 예약 순서로 실행합니다.
+  // [FLOW-05 / 11-C단계] notification dependency는 handler → Android channel → 권한 → 이전 demo 예약 취소를 차례로 실행합니다.
   // handler 등록은 바로 끝나고, 기기 작업은 `await`로 앞 단계가 끝난 뒤 다음 단계가 시작되게 합니다.
   configureNotificationHandler();
   await configureAndroidChannel();
   await ensureNotificationPermission();
   await cancelPendingDemoNotifications();
 
+  // [FLOW-05 / 12-C단계] 마지막 `scheduleNotificationAsync`가 1초 뒤 local 알림 예약을 완료하면 Promise가 dispatcher로 돌아갑니다.
   await Notifications.scheduleNotificationAsync({
     content: {
       title,

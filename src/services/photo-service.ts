@@ -44,7 +44,7 @@ async function ensurePhotoPermission(): Promise<void> {
 
 // [역할] `selectPhotoImages`는 최대 두 사진을 고르고 한 장씩 줄여 PNG base64 결과 배열로 돌려줍니다.
 export async function selectPhotoImages(): Promise<PhotoResult[]> {
-  // [FLOW-05 / 관련 코드] dispatcher가 `getPhotoImages`를 받으면 이 함수를 기다립니다.
+  // [FLOW-05 / 11-H단계] 사진 dependency는 권한 확인을 await한 뒤 OS picker를 열고 취소·선택 결과로 분기합니다.
   // 성공한 사진 배열이나 발생한 오류는 공통 bridge 응답으로 바뀝니다.
   await ensurePhotoPermission();
 
@@ -71,6 +71,7 @@ export async function selectPhotoImages(): Promise<PhotoResult[]> {
   for (const [index, asset] of selection.assets
     .slice(0, MAX_SELECTION)
     .entries()) {
+    // [FLOW-05 / 12-H단계] 선택된 최대 두 asset을 순서대로 resize·render·PNG base64 변환해 완성 배열에 넣고 dispatcher로 반환합니다.
     // 원본 너비와 높이로 줄일 크기를 먼저 계산합니다. 실제 이미지 변경은 아래 context가 맡습니다.
     const size = getConstrainedImageSize(
       asset.width,

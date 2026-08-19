@@ -1,6 +1,7 @@
 // [파일 역할] 첫 WebView에 넣을 학습용 웹 문서입니다. HTML·CSS·JavaScript와 bridge 버튼 8개가 들어 있습니다.
-// [FLOW-05] 웹 문서가 요청을 보내면 앱이 검사하고 기기 기능을 실행한 뒤 `calledByNative`로 결과를 돌려줍니다.
-// [FLOW-05 / 1단계] `sendNative`는 uuid, action, params를 JSON 문자열로 만들어 ReactNativeWebView에 보냅니다.
+// [FLOW-05] 시작: 사용자가 bridge 버튼을 누르면 WebView DOM이 해당 `onclick`에서 `sendNative(...)`를 호출합니다.
+// [FLOW-05 / 1단계] `sendNative`는 새 uuid와 전달받은 action·params로 request 객체를 만듭니다.
+// [FLOW-05 / 2단계] 같은 함수가 request를 `JSON.stringify`한 문자열 하나로 `ReactNativeWebView.postMessage`에 전달합니다.
 // [주의] 아래 backtick 안쪽은 설명용 글이 아니라 WebView가 실제로 실행할 웹 문서입니다.
 // 안쪽에 TypeScript 설명 주석을 넣거나 따옴표와 공백을 바꾸면 앱 동작이 달라질 수 있습니다.
 // [문법] backtick을 쓰면 여러 줄의 HTML 전체를 JavaScript 문자열 하나로 담을 수 있습니다.
@@ -245,6 +246,7 @@ export const LOCAL_DEMO_HTML = `<!doctype html>
     </section>
   </body>
 </html>`;
-// [FLOW-05 / 8단계] 웹 문서의 `calledByNative`가 응답을 읽고 오류, UUID, 또는 사진 두 장을 화면에 표시합니다.
+// [FLOW-05 / 18단계] injected script가 WebView 안에서 `calledByNative(serializedResponse)`를 호출하면 함수가 JSON을 parse합니다.
+// [FLOW-05 / 19단계] 종료: `calledByNative`가 오류 Alert 또는 action별 UUID·사진 UI를 반영하고 `"complete"`를 반환합니다.
 
 // =================================================================================================

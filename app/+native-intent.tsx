@@ -18,7 +18,9 @@ export function redirectSystemPath({ path }: {
   path: string;
   initial: boolean;
 }): string {
-  // [FLOW-06 / 1단계] 앱이 꺼져 있었든 이미 실행 중이었든 같은 함수로 주소를 바꿉니다.
+  // [FLOW-06 / 1-A단계] OS URL을 route로 확정하기 전에 Expo Router가 cold·warm 모두 이 hook을 자동 호출합니다.
+  // [FLOW-06 / 2-A단계] hook은 받은 `path`를 pure `rewriteIncomingSystemPath(path)`에 그대로 전달합니다.
+  // [FLOW-06 / 4-A단계] 반환된 route 문자열은 Expo Router가 소비해 Root `Stack`의 index query 또는 원래 route로 연결합니다.
   return rewriteIncomingSystemPath(path);
 }
 

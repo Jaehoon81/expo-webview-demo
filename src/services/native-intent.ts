@@ -1,5 +1,5 @@
 // [파일 역할] OS와 Expo Go가 서로 다른 모양으로 준 demo 주소를 첫 화면이 읽는 한 가지 모양으로 바꿉니다.
-// [FLOW-06] OS나 WebView에서 받은 deep link를 검사해 탭 번호와 선택 주소로 바꾸고, 이미 만든 탭 화면에 적용합니다.
+// [FLOW-06] 시작: app deep link는 OS path, 일반 WebView, popup 중 하나에서 들어오고 외부 scheme은 별도 OS branch로 들어옵니다.
 
 // ======================================== system URL 변환 ========================================
 
@@ -29,7 +29,7 @@ export function rewriteIncomingSystemPath(path: string): string {
       canonicalUrl.searchParams.append(key, value);
     });
 
-    // [FLOW-06 / 2단계] custom scheme 주소 전체를 `demoDeepLink` 한 칸에 넣어 `/` 화면으로 보냅니다.
+    // [FLOW-06 / 3-A단계] demo path이면 query를 canonical custom URL에 복사하고 전체를 encode한 index route 문자열로 반환합니다.
     // [문법] `encodeURIComponent`는 주소 안의 `?`와 `&`를 글자로 바꿉니다.
     // 그래서 안쪽 주소가 바깥 route의 query 구분자로 잘못 읽히지 않습니다.
     return `/?demoDeepLink=${encodeURIComponent(canonicalUrl.toString())}`;

@@ -33,7 +33,7 @@ export const jsonPlaceholderUsersSchema = z.array(
 // [문법] 입력 type을 `unknown`으로 두면 검사 전에는 `input.id`처럼 값을 바로 사용할 수 없습니다.
 // 외부 응답을 실수로 믿고 쓰지 않게 하는 장치입니다.
 export function parseUsersResponse(input: unknown): User[] {
-  // [FLOW-07 / 4단계] 외부 값을 검사한 뒤 화면에서 쓰지 않는 필드는 버리고 id, name, email만 돌려줍니다.
+  // [FLOW-07 / 7단계] Zod가 배열의 모든 항목을 검사한 뒤 map이 id·name·email만 가진 `User[]`를 API 함수로 반환합니다.
   // [문법] `map` 안의 `{ id, name, email }`은 사용자 객체에서 세 값을 꺼냅니다.
   // 반환하는 `{ id, name, email }`은 같은 이름을 key와 값으로 쓰는 짧은 객체 문법입니다.
   // [역할] `map` callback은 검사를 마친 사용자 한 명에서 앱이 필요한 id, name, email만 골라냅니다.

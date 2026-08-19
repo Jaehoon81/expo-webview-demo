@@ -25,7 +25,7 @@ let deviceIdPromise: Promise<string> | null = null;
 // [문법] `async` 함수는 문자열을 바로 주는 대신 `Promise<string>`으로 돌려줍니다.
 // `await` 중 오류가 나면 이 함수를 부른 쪽에서도 실패한 Promise로 받습니다.
 async function loadDeviceId(): Promise<string> {
-  // [FLOW-05 / 6단계] 저장된 UUID가 있으면 그대로 쓰고, 없을 때만 새 UUID를 만들어 저장합니다.
+  // [FLOW-05 / 12-A단계] shared Promise 안에서 SecureStore read를 await하고 저장값 반환 또는 UUID 생성·저장 branch를 끝낸 뒤 dispatcher로 돌려줍니다.
   const storedDeviceId = await SecureStore.getItemAsync(DEVICE_ID_KEY);
 
   if (storedDeviceId) {
@@ -41,6 +41,7 @@ async function loadDeviceId(): Promise<string> {
 
 // [역할] `getOrCreateDeviceId`는 동시에 들어온 요청들이 진행 중인 UUID 작업 하나를 함께 기다리게 합니다.
 export function getOrCreateDeviceId(): Promise<string> {
+  // [FLOW-05 / 11-A단계] UUID dependency가 이 함수를 호출하면 진행 중 Promise를 재사용하거나 `loadDeviceId()`를 한 번 시작합니다.
   // 여러 WebView가 동시에 요청해도 진행 중인 Promise 하나를 함께 기다립니다. 그래서 서로 다른 UUID가 생기지 않습니다.
   if (!deviceIdPromise) {
     // [역할] 실패 처리 callback은 끝나지 못한 Promise를 cache에서 지우고 같은 오류를 호출자에게 다시 보냅니다.

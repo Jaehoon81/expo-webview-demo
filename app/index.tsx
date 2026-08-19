@@ -16,11 +16,12 @@ import { useAppStore } from "@/src/store/app-store";
 
 // [역할] `IndexScreen`은 저장값을 읽는 동안 loading을 보여 주고, 완료된 뒤에만 `DemoShell`을 만듭니다.
 export default function IndexScreen() {
-  // [FLOW-01 / 2단계] Zustand가 저장값 읽기를 마치면 `hasHydrated`가 바뀌고 이 화면을 다시 그립니다.
+  // [FLOW-01 / 2-B단계] Root `Stack`이 `IndexScreen`을 render하면 selector가 `hasHydrated`를 구독합니다.
   // [라이브러리] 이 selector는 store 전체가 아니라 `hasHydrated` 하나만 지켜봅니다.
   // [역할] selector callback은 Zustand state에서 저장값 읽기 완료 여부만 골라냅니다.
   const hasHydrated = useAppStore((state) => state.hasHydrated);
 
+  // [FLOW-01 / 3-B단계] SecureStore read가 끝나기 전의 `false`는 이 loading branch를 선택해 `DemoShell` mount를 보류합니다.
   // [문법] 아직 준비되지 않았으면 여기서 바로 return합니다. 그래서 로딩 화면과 실제 화면이 함께 나타나지 않습니다.
   if (!hasHydrated) {
     // [이유] 로딩 화면을 Root Stack 안에 두면 주소로 앱을 처음 열어도 Stack이 먼저 준비됩니다.
@@ -37,7 +38,8 @@ export default function IndexScreen() {
     );
   }
 
-  // [FLOW-01 / 5단계] 저장된 탭이나 기본 탭이 정해진 뒤에만 실제 탭 화면을 만듭니다.
+  // [FLOW-01 / 6단계] Zustand가 구독자에게 `hasHydrated=true`를 알리면 React가 이 화면을 다시 render해 loading branch를 벗어납니다.
+  // [FLOW-01 / 7단계] React는 이 return의 `DemoShell`을 처음 mount하고 복원된 탭을 소비하는 다음 단계로 넘깁니다.
   // [라이브러리] `edges={["top"]}`은 위쪽 안전 여백만 이곳에서 넣겠다는 뜻입니다.
   // 아래쪽 여백은 BottomTabBar가 기기에 맞춰 따로 계산합니다.
   return (

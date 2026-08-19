@@ -83,7 +83,7 @@ export type BridgeRequest = z.infer<typeof bridgeRequestSchema>;
 
 // [역할] `parseBridgeRequest`는 WebView 문자열을 JSON으로 읽고 action별 규칙을 모두 통과한 요청만 돌려줍니다.
 export function parseBridgeRequest(message: string): BridgeRequest {
-  // [FLOW-05 / 4단계] 먼저 JSON 문자열을 객체로 바꾸고, 바로 Zod로 action과 params를 검사합니다.
+  // [FLOW-05 / 8단계] dispatcher가 이 함수를 호출하면 JSON parse 뒤 strict Zod union으로 uuid·action·action별 params를 검사합니다.
   // 검사 전 값이 앱 기능으로 넘어가지 않게 한 줄에서 이어 처리합니다. 실패는 dispatcher가 공통 오류로 바꿉니다.
   return bridgeRequestSchema.parse(JSON.parse(message));
 }

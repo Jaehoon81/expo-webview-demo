@@ -80,7 +80,7 @@ export function normalizeHttpsUrl(value: string): string | null {
 export function parseDemoDeepLink(value: string): DemoDeepLink | null {
   // 외부 문자열이 잘못돼도 오류를 밖으로 던지지 않고 `null`을 돌려줍니다.
   try {
-    // [FLOW-06 / 4단계] development build 주소와 Expo Go의 `/--/` 주소를 같은 탭 이동 값으로 읽습니다.
+    // [FLOW-06 / 8단계] 공통 parser가 custom scheme과 Expo Go 모양을 읽고 target index·optional HTTPS URL을 runtime 검사합니다.
     const url = new URL(value);
     const isCustomScheme =
       url.protocol === "mywebviewapp:" && url.hostname === "webviewappdemo";
@@ -140,14 +140,15 @@ export function classifyNavigationUrl(url: string): NavigationDecision {
   }
 
   // 일반 주소를 나누기 전에 이 앱의 deep link인지 먼저 확인해 앱 안 탭 이동으로 보냅니다.
+  // [FLOW-06 / 2-B단계] 일반 WebView classifier는 다른 scheme 분류보다 먼저 app deep link parser를 호출합니다.
   const deepLink = parseDemoDeepLink(url);
   if (deepLink) {
-    // [FLOW-06 / 6단계] WebView에서 앱 전용 주소를 누르면 웹 페이지 열기를 막고 앱 탭을 이동합니다.
+    // [FLOW-06 / 3-B단계] parser 성공값은 `deep-link` decision으로 돌아가 DemoShell의 적용 branch와 WebView load 차단을 함께 선택합니다.
     return { type: "deep-link", value: deepLink };
   }
 
   try {
-    // [FLOW-03 / 3단계] scheme을 읽어 HTTPS는 허용하고 HTTP는 막습니다. 연락처 등은 OS 앱에 맡깁니다.
+    // [FLOW-03 / 6단계] classifier는 URL을 parse해 `allow`, `block-http`, `external`, `ignore` decision 중 하나로만 반환합니다.
     const parsed = new URL(url);
 
     if (parsed.protocol === "https:") {
@@ -177,7 +178,7 @@ export function classifyNavigationUrl(url: string): NavigationDecision {
 // [역할] `classifyPopupUrl`은 새 창 URL을 원래 탭·외부 앱·앱 안 popup 처리 중 하나로 나눕니다.
 export function classifyPopupUrl(url: string): PopupDecision {
   try {
-    // [FLOW-04 / 2단계] 새 창 주소를 현재 탭, OS 외부 앱, 앱 안 popup 중 하나로 나눕니다.
+    // [FLOW-04 / 5단계] `classifyPopupUrl`은 host와 scheme을 검사해 `parent`, `external`, `popup` decision 하나를 반환합니다.
     const parsed = new URL(url);
     // host를 소문자로 바꿔 대문자 사용으로 주소 규칙을 피해 가지 못하게 합니다.
     const hostname = parsed.hostname.toLowerCase();

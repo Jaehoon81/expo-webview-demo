@@ -29,13 +29,14 @@ export const usersKeys = {
 // [역할] `fetchUsers`는 사용자 API를 요청하고, 응답을 검사한 `User[]`만 돌려줍니다.
 // [문법] `signal?`의 `?`는 이 값을 생략해도 된다는 뜻입니다. Query가 부를 때는 요청 취소 신호를 넣습니다.
 export async function fetchUsers(signal?: AbortSignal): Promise<User[]> {
-  // [FLOW-07 / 3단계] Query의 취소 신호와 10초 제한을 Axios에 넘깁니다. 응답은 아직 믿지 않고 `unknown`으로 받습니다.
+  // [FLOW-07 / 5단계] Query function이 이 함수를 호출하면 AbortSignal과 10초 timeout으로 Axios GET을 시작합니다.
   const response = await axios.get<unknown>(USERS_ENDPOINT, {
     signal,
     timeout: 10_000,
   });
 
   // HTTP 요청이 성공해도 내용이 올바르다는 보장은 없습니다. Zod 검사를 통과한 User 배열만 돌려줍니다.
+  // [FLOW-07 / 6-A단계] HTTP success의 `unknown` data는 바로 쓰지 않고 `parseUsersResponse`로 보내 runtime validation을 시작합니다.
   return parseUsersResponse(response.data);
 }
 
@@ -44,9 +45,11 @@ export function shouldRetryUsersRequest(
   failureCount: number,
   error: Error,
 ): boolean {
+  // [FLOW-07 / 6-B단계] Query가 실패를 받으면 이 callback을 자동 호출해 network 무응답·5xx만 최대 한 번 더 query function으로 보냅니다.
   // 이미 한 번 다시 시도했거나 Axios 오류가 아니면 더 요청하지 않습니다.
   // 입력 오류나 Zod 오류처럼 같은 요청을 반복해도 해결되지 않는 경우를 막기 위해서입니다.
   if (failureCount >= 1 || !isAxiosError(error)) {
+    // [FLOW-07 / 6-C단계] 두 번째 실패, non-Axios·Zod error, cancel 또는 4xx branch는 false로 retry loop를 끝냅니다.
     return false;
   }
 
@@ -71,12 +74,14 @@ export function shouldRetryUsersRequest(
 export function useUsersQuery(
   enabled = true,
 ): UseQueryResult<User[], Error> {
-  // [FLOW-07 / 2단계] native 탭을 열기 전에는 `enabled=false`라 사용자 API를 미리 호출하지 않습니다.
+  // [FLOW-07 / 3단계] custom Hook은 key·enabled·queryFn·staleTime·retry를 `useQuery`에 등록하고 observer result를 caller에 반환합니다.
+  // [FLOW-07 / 4-A단계] `enabled=false`이면 observer와 기존 cache는 유지하지만 TanStack Query가 query function을 자동 호출하지 않습니다.
   return useQuery({
     queryKey: usersKeys.all,
     enabled,
     // [문법] `{ signal }`은 Query가 준 객체에서 취소 신호만 꺼내 `fetchUsers`에 전달합니다.
     // [역할] `queryFn` callback은 Query의 취소 신호를 실제 사용자 API 함수에 전달합니다.
+    // [FLOW-07 / 4-B단계] `enabled=true`이고 fetch가 필요하면 TanStack Query가 이 `queryFn`을 자동 호출해 signal을 `fetchUsers`에 전달합니다.
     queryFn: ({ signal }) => fetchUsers(signal),
     staleTime: USERS_STALE_TIME_MS,
     retry: shouldRetryUsersRequest,

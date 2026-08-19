@@ -40,7 +40,7 @@ export function BottomTabBar({
 
   // --------------------------------------- 탭 버튼 만들기 ----------------------------------------
 
-  // [FLOW-08 / 5단계] 하단 바가 기기 아래쪽 안전 여백까지 직접 넣습니다.
+  // [FLOW-08 / 8단계] `BottomTabBar`는 같은 safe-area bottom을 실제 padding으로 적용해 animation 거리와 보이는 높이를 맞춥니다.
   // DemoShell은 내용 높이와 이 여백을 더해 바를 숨길 거리와 화면 아래 여백을 계산합니다.
   return (
     <View
@@ -62,7 +62,7 @@ export function BottomTabBar({
             key={tab.tag}
             onPress={() => {
               // [역할] `onPress` callback은 이 버튼의 탭 번호만 DemoShell의 선택 함수에 전달합니다.
-              // [FLOW-02 / 3단계] 이 버튼은 탭을 어떻게 바꿀지 결정하지 않고, 누른 탭 번호만 DemoShell에 보냅니다.
+              // [FLOW-02 / 6단계] 사용자가 버튼을 누르면 React Native가 `onPress`를 호출하고 이 callback은 `onSelect(tab.index)`를 실행합니다.
               onSelect(tab.index);
             }}
             // [역할] style callback은 버튼을 누르는 동안에만 눌림 배경 style을 더합니다.

@@ -16,7 +16,7 @@ export function createQueryClient(): QueryClient {
   return new QueryClient({
     defaultOptions: {
       queries: {
-        // [FLOW-09 / 4단계] 인터넷 연결이 돌아왔다는 이유만으로 API를 자동 호출하지 않습니다.
+        // [FLOW-09 / 7단계] reconnect event가 와도 이 false 정책이 Query 자동 refetch를 막아 명시적 사용자 입력을 기다립니다.
         // 사용자가 다시 시도하거나 새로 고침을 선택했을 때 요청합니다.
         refetchOnReconnect: false,
         // 모바일 앱은 웹 브라우저와 화면 활성 방식이 다르므로 window focus를 새 요청 신호로 쓰지 않습니다.
@@ -31,7 +31,7 @@ export function createQueryClient(): QueryClient {
   });
 }
 
-// [FLOW-07 / 관련 코드] RootLayout이 이 한 개의 QueryClient를 전달하므로 화면이 바뀌어도 사용자 목록이 남습니다.
+// [FLOW-07 / 8단계] 성공 data 또는 error를 받은 QueryClient가 `['users']` cache를 갱신하고 observer에게 알려 component 재render를 요청합니다.
 // [문법] 파일 바깥쪽의 `const`는 이 파일을 처음 가져올 때 한 번만 만들어집니다.
 // 같은 앱 실행 중 이 파일을 가져오는 코드는 모두 이 QueryClient 하나를 함께 씁니다.
 export const queryClient = createQueryClient();
