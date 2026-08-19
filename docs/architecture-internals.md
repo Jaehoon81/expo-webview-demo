@@ -4,6 +4,8 @@
 
 과거 build·실기기 결과는 날짜별 완료 문서에 보존한다. 이 문서는 과거 이력을 반복하지 않고 현재 source가 어떤 책임과 수명을 갖는지 설명한다.
 
+현재 production source의 runtime 흐름은 `FLOW-01`~`FLOW-09`의 유일한 시작 표식 9개와 고유 단계 229개로 연결된다. 같은 깊이에서 갈라지는 입력·기능·결과는 `N-A`, `N-B` branch로 표시하며, 이전 `[관련 코드]` 표식은 사용하지 않는다.
+
 ## 1. 저장소 경계와 기준 source
 
 ```text
@@ -63,11 +65,15 @@ OS/Expo Router
 LOCAL_DEMO_HTML
   └─ ReactNativeWebView.postMessage(JSON string)
       └─ WebTab.onMessage
-          └─ DemoShell.handleBridgeMessage
-              └─ bridge schema → dispatcher → injected dependency
-                  └─ BridgeResponse
-                      └─ WebTab.injectJavaScript
-                          └─ window.calledByNative(serialized response)
+          └─ onBridgeMessage prop
+              └─ DemoShell의 tab.index closure
+                  └─ DemoShell.handleBridgeMessage
+                      └─ bridge schema → dispatcher → injected dependency
+                          └─ BridgeResponse Promise fulfill
+                              └─ handleBridgeMessage와 prop return을 역순으로 통과
+                                  └─ WebTab.onMessage의 .then
+                                      └─ WebTab.injectJavaScript
+                                          └─ window.calledByNative(serialized response)
 ```
 
 첫 축은 provider·route·화면 수명, 둘째 축은 신뢰할 수 없는 Web 입력과 native 기능의 왕복 경계다. 두 흐름은 `DemoShell`에서 만나지만 validation과 실제 기기 기능은 별도 module이 담당한다.
@@ -182,7 +188,24 @@ React state는 표시를 다시 계산하고, ref는 최신 명령 상태를 보
 
 `originWhitelist={["*"]}`는 모든 URL을 무조건 load한다는 뜻이 아니다. URL을 `onShouldStartLoadWithRequest`까지 전달하고 위 policy가 최종 boolean을 결정하게 한다. WebView의 `mixedContentMode="never"`도 함께 유지한다.
 
-### 5.3 platform history
+### 5.3 native WebView 자동 callback 계약
+
+React가 `key`와 `source`를 commit하면 native WebView가 request를 시작한다. Android 최초 `source` load는 `onShouldStartLoadWithRequest`를 호출하지 않으며, 그 밖의 navigation은 이 callback의 `true`/`false`를 받은 뒤 계속하거나 중단한다.
+
+이 프로젝트의 Expo SDK 54 권장·설치 version인 `react-native-webview` `13.15.0` 문서와 wrapper source에서 확인한 등록 callback 순서는 다음과 같다.
+
+| lifecycle | app callback 순서 | source FLOW |
+|---|---|---|
+| load 시작 | `onLoadStart` → `onNavigationStateChange(start)`; `onLoadProgress`는 진행 중 반복 | FLOW-03 `8`, `9-A`, `9-B` |
+| 성공 | `onLoad` → `onLoadEnd` → `onNavigationStateChange(end)` | FLOW-03 `10-A`~`12-A` |
+| 일반 실패 | `onError` → `onLoadEnd` | FLOW-03 `10-B`, `11-B` |
+| HTTP 오류 | 별도 `onHttpError`; 일반 finish event가 이어질 수 있음 | FLOW-03 `10-C` |
+| Web message | page의 `postMessage` → `onMessage` | FLOW-05 `2`~`4` |
+| 새 창 | page의 `window.open`/`_blank` → `onOpenWindow` | FLOW-04 `1`~`2` |
+
+`onNavigationStateChange` callback 하나는 시작과 성공 종료 event를 모두 받으므로 history ref를 두 시점에 갱신한다. 이 표는 JavaScript callback contract이며 실제 Android/iOS native event timing의 실기기 증거와는 구분한다.
+
+### 5.4 platform history
 
 - Android hardware back은 `DemoShell`에서 popup → 현재 WebView → app exit 순서로 처리한다.
 - iOS Web tab은 상단 back/forward button을 표시하며 WebView swipe gesture도 허용한다.
@@ -201,6 +224,8 @@ React state는 표시를 다시 계산하고, ref는 최신 명령 상태를 보
 [`src/components/PopupWebView.tsx`](../src/components/PopupWebView.tsx)는 root와 분리된 Modal native tree이므로 내부 `SafeAreaProvider`를 다시 만들고 top edge만 적용한다. bottom에는 별도 toolbar가 없으며 popup이 열려 있는 동안 root 하단 tab은 숨긴다.
 
 popup 내부의 navigation도 일반 URL 정책을 다시 거친다. popup에서 또 발생한 `window.open`은 modal을 중첩하지 않고 현재 popup URL을 바꾸거나 외부 앱으로 보낸다.
+
+`popupUrl` 변경 뒤 React commit이 reset effect와 새 WebView mount를 만들고, 그 뒤 native가 등록된 callback을 호출한다. Android 최초 popup `source`는 일반 tab과 마찬가지로 `onShouldStartLoadWithRequest`를 생략한다. 이후 `onLoadStart`·`onLoadProgress`·`onNavigationStateChange` 또는 `onError`·`onHttpError`가 popup 자신의 progress/history/error state만 갱신한다. 이 경로는 FLOW-04 `7`~`14-B`에 단계별로 표시돼 있다.
 
 popup close/back 우선순위는 다음과 같다.
 
@@ -243,7 +268,26 @@ type BridgeResponse<T = unknown> = {
 
 [`src/bridge/dispatcher.ts`](../src/bridge/dispatcher.ts)는 Expo API와 React component를 직접 import하지 않는다. `DemoShell`이 현재 refs, state setter와 service 함수를 `BridgeDependencies`로 주입한다. 이 구조는 action 분기를 unit test할 수 있게 하고 UI/native 구현 수명과 dispatcher를 분리한다.
 
-### 8.2 action별 책임
+### 8.2 request와 response의 왕복
+
+Bridge는 dispatcher 호출까지만 내려가는 단방향 흐름이 아니다. `BridgeResponse`가 fulfill된 뒤 같은 caller chain을 역순으로 올라가 원래 sender WebView에 돌아오는 것까지 하나의 계약이다.
+
+```text
+FLOW-05
+1 request 생성 → 2 postMessage → 3 onMessage 자동 callback
+→ 4 WebTab.onBridgeMessage(data)
+→ 5 DemoShell tab.index closure → 6 handleBridgeMessage
+→ 7~13 parse·action dependency·공통 envelope
+→ 14 dispatchBridgeMessage Promise fulfill
+→ 15 handleBridgeMessage가 같은 Promise return
+→ closure와 prop return을 역순으로 통과
+→ 16 WebTab의 .then(response)
+→ 17 injectBridgeResponse → 18 calledByNative parse → 19 종료
+```
+
+`onMessage` 안의 `void`는 React Native event callback의 반환값을 버릴 뿐, `onBridgeMessage(...).then(...)`의 실행을 취소하지 않는다. tab index closure 때문에 dependency는 sender를 식별하고, `.then` closure 때문에 response는 tab state가 중간에 바뀌어도 요청을 보낸 원래 `WebTab` instance에 주입된다.
+
+### 8.3 action별 책임
 
 | Action | 입력 | 실행 주체 | 성공 result |
 |---|---|---|---|
@@ -312,6 +356,8 @@ mywebviewapp://webviewappdemo?target=1&url=m.nate.com
 
 `applyDeepLink`는 tab을 먼저 선택하고, Web tab에 URL이 있으면 기존 instance의 `loadUrl`을 호출한다. 처리한 query는 `router.setParams({ demoDeepLink: undefined })`로 제거해 다음 render의 중복 적용을 막는다.
 
+OS 입력은 FLOW-06 `1-A`~`6-A`, 일반 WebView 입력은 `1-B`~`3-B`, popup 입력은 `1-C`·`3-C`를 거친 뒤 공통 `7`단계 handler와 `8`단계 parser에 합류한다. invalid 입력은 `9-A`에서 state 변경 없이 끝나고, valid 입력은 `9-B`→`10`→Web `11-A` 또는 native `11-B`로 갈라진 뒤 `12`에서 boolean을 caller에 반환하고 `13-A`~`13-C`에서 종료한다. app이 처리하지 않는 외부 scheme만 `2-D`→`3-D Linking.openURL`→`4-D`에서 별도로 종료한다.
+
 ### 10.2 WebView 내부에서 app으로 이동
 
 WebView가 같은 custom scheme을 누르면 `classifyNavigationUrl`이 즉시 `deep-link`로 분류한다. OS로 내보냈다가 다시 들어오지 않고 `DemoShell.applyDeepLink`를 직접 호출하므로 Expo Go에서도 같은 탭 이동 계약을 확인할 수 있다.
@@ -326,13 +372,18 @@ WebView가 같은 custom scheme을 누르면 `classifyNavigationUrl`이 즉시 `
 
 ```text
 NativeUsersScreen(active)
-  → useUsersQuery(enabled)
-      → Axios GET /users (AbortSignal, 10s timeout)
-          → parseUsersResponse(unknown)
-              → User[]
-                  → TanStack Query cache ['users']
-                      → pending / error / empty / list UI
+  → useUsersQuery(enabled)로 Query observer 등록
+      ├─ enabled=false: observer/cache 유지, queryFn 자동 호출 없음
+      └─ enabled=true이고 fetch 필요: TanStack Query가 queryFn 자동 호출
+          → Axios GET /users (AbortSignal, 10s timeout)
+              → parseUsersResponse(unknown)
+                  → User[] 또는 error
+                      → TanStack Query cache ['users'] 갱신
+                          → observer 통지 → React 재render
+                              → pending / error / empty / list UI
 ```
+
+FLOW-07의 `3`~`10`단계가 이 library callback과 consumer 순서를 고정한다. 최초 결과 effect는 `11-A`·`11-B`에서 한 번만 Alert를 내고, retry button·tab 재선택·pull-to-refresh·bridge는 `12-A`~`12-D`에서 공통 `13`단계 `refetch()`로 합류한다.
 
 retry 정책은 다음과 같다.
 
@@ -343,6 +394,8 @@ retry 정책은 다음과 같다.
 | HTTP 4xx | 없음 |
 | Abort/cancel | 없음 |
 | Zod parsing error | 없음 |
+
+iOS pull 결과는 request 완료와 `onScrollEndDrag` 중 어느 event가 먼저인지에 따라 두 경로가 된다. request가 먼저면 `15-B → 16-A pending → 17 drag 종료 → 15-B 재진입 → 16-B timer → 18 Alert`, drag가 먼저면 `17 → 15-B → 16-B → 18`이다. Android와 일반 retry는 `15-A`에서 즉시 Alert를 표시한다. 화면은 `19`에서 최신 Query cache를 유지하며 종료한다.
 
 성공 data는 5분 동안 fresh다. 그러나 사용자가 pull-to-refresh, 오류 retry 또는 현재 native tab을 재선택하면 `refetch()`를 명시적으로 호출한다.
 

@@ -91,23 +91,21 @@ import마다 package 소개를 반복하지 않는다. 같은 library라도 이 
 
 ### `[FLOW-NN]`
 
-여러 파일을 차례로 거치는 기능 흐름의 출발점이다. `FLOW-01`부터 `FLOW-09`까지 각 표식은 실제 앱 source 전체에서 한 번만 나온다.
+여러 파일을 차례로 거치는 기능 흐름의 유일한 시작 표식이다. 주석 본문은 반드시 `시작:`으로 실제 최초 caller 또는 자동 실행 주체를 밝힌다. `FLOW-01`부터 `FLOW-09`까지 각 표식은 production source 전체에서 한 번만 나온다.
 
 ### `[FLOW-NN / N단계]`
 
-해당 기능 흐름에서 몇 번째 단계인지 나타낸다. 같은 flow와 단계 번호 조합도 실제 앱 source 전체에서 한 번만 사용한다.
+해당 기능 흐름의 공통 직렬 경로에서 몇 번째 단계인지 나타낸다. 같은 flow와 단계 번호 조합은 production source 전체에서 한 번만 사용한다. 종료점은 주석 본문에 `종료:` 또는 `종료(분기 이름):`을 적어 다음 사용자 입력을 기다리는지, 다른 FLOW로 넘기는지도 함께 밝힌다.
 
-단계 번호가 파일의 위에서 아래 순서와 항상 같지는 않다. 예를 들어 `useUsersQuery`는 파일 아래쪽에 있지만, 그 함수가 부르는 `fetchUsers`는 파일 위쪽에 있다. 이 문서에 적힌 순서대로 함수 이름을 검색하면 된다.
+### `[FLOW-NN / N-A단계]`
+
+같은 `N`단계에서 서로 다른 입력, 기능 또는 결과로 갈라지는 동급 branch다. 예를 들어 `FLOW-05 / 10-A`~`10-H`는 dispatcher의 action별 branch이고, `FLOW-03 / 10-A`~`10-C`는 WebView 성공·일반 오류·HTTP 오류 callback이다. 알파벳은 우선순위가 아니라 서로 다른 인과 경로를 뜻하며, 각 조합도 production source 전체에서 한 번만 사용한다.
+
+단계 번호가 파일의 위에서 아래 순서와 항상 같지는 않다. React, Expo Router, `react-native-webview`, TanStack Query가 등록된 callback을 나중에 자동 호출하거나, 호출 결과가 Promise를 따라 caller로 되돌아가기 때문이다. 이 문서의 단계 지도에서 현재 branch를 선택한 뒤 같은 FLOW 표식을 검색한다.
 
 ### `[FLOW-NN / 관련 코드]`
 
-주요 단계는 아니지만 같은 규칙을 함께 사용하는 코드다. 같은 표식이 여러 파일에 나올 수 있다.
-
-예:
-
-- WebView와 FlatList가 같은 함수로 스크롤 방향을 계산함
-- 사진·알림 service가 bridge 요청을 실제 휴대폰 기능으로 이어 줌
-- 하나의 Query client가 받아 둔 사용자 목록을 계속 보관함
+이전 주석 체계에서 여러 call site를 한 표식으로 묶을 때 쓰던 형식이다. 현재 production source에는 남아 있지 않다. 실제로 값이나 control을 전달하는 caller·consumer는 모두 고유한 숫자 또는 `N-A` branch 단계로 승격해, 검색 중 인과 관계가 생략되지 않게 한다.
 
 ### `[이유]`
 
@@ -133,29 +131,36 @@ import마다 package 소개를 반복하지 않는다. 같은 library라도 이 
 - `lifecycle`, `runtime`, `dependency`, `caller`, `consumer`, `branch`, `fixture`, `mock` 같은 개발 용어만으로 설명을 끝내지 않는다. 꼭 써야 하면 같은 문장에서 쉬운 뜻과 이 코드의 실제 동작을 붙인다.
 - 한 문장에는 가능하면 한 가지 핵심만 둔다. 문장이 길어지면 “누가 하는가”, “언제 하는가”, “왜 필요한가”로 나눈다.
 - 동일한 JSX 구조, 명백한 style property, 단순 field와 닫는 괄호는 줄마다 반복하지 않는다. 여러 줄이 하나의 계약이면 한 주석으로 묶는다.
-- 주요 `[FLOW-NN]`과 `[FLOW-NN / N단계]`는 실제 앱 source 전체에서 한 곳에만 둔다. 문법이나 library 설명이 같은 위치에 필요해도 FLOW 표식을 하나 더 만들지 않는다.
+- 현재 production source에는 시작 표식 9개와 고유 단계 표식 229개, 총 238개의 FLOW 표식이 있다. 단계 중복과 `[관련 코드]` 표식은 0개다.
+- `[FLOW-NN]`, `[FLOW-NN / N단계]`, `[FLOW-NN / N-A단계]`는 production source 전체에서 한 곳에만 둔다. 문법이나 library 설명이 같은 위치에 필요해도 FLOW 표식을 하나 더 만들지 않는다.
+- FLOW 표식이 있는 줄은 그 단계의 caller·입력·출력 또는 종료를 설명하는 독립 문장을 가져야 한다. `[문법]`, `[라이브러리]` 같은 비-FLOW 표식을 같은 줄에 붙여 단계 설명을 대신하지 않는다.
+- 자동 callback에는 React·Expo Router·native WebView·TanStack Query 중 누가 언제 호출하는지 적고, callback이 받은 값과 다음 consumer를 같은 단계에서 연결한다.
+- Promise 반환 경로는 호출 방향뿐 아니라 fulfill된 값이 어느 `return`과 prop을 역순으로 거쳐 최종 `.then`까지 도달하는지도 별도 단계로 적는다.
 - 주석을 고치다가 실행 오류로 보이는 부분을 찾아도 같은 변경에 섞어 고치지 않는다. 어떤 화면과 함수에 영향이 있는지 먼저 따로 보고한다.
 
 ## 2. 먼저 따라갈 아홉 가지 흐름
 
-처음에는 아래 순서대로 한 흐름씩 읽는 것을 권장한다. 한 flow 안에서는 링크를 열고 해당 `[FLOW-NN / N단계]`를 검색하면 된다.
+처음에는 아래 순서대로 한 흐름씩 읽는 것을 권장한다. 한 flow 안에서는 링크를 열고 해당 `[FLOW-NN / N단계]` 또는 `[FLOW-NN / N-A단계]`를 검색한다. `→`는 반드시 이어지는 호출·반환이고, `├`와 `└`는 같은 단계에서 선택되거나 병행되는 branch다.
 
 ### FLOW-01: 앱 시작과 마지막 탭 복원
 
-목표는 Root navigation이 먼저 준비되고 SecureStore 복원이 끝난 뒤에만 실제 shell이 mount되는 이유를 이해하는 것이다.
+목표는 Root navigation 준비와 SecureStore 복원이 어디서 병행되고, 두 경로가 합쳐진 뒤에만 실제 shell이 mount되는 이유를 이해하는 것이다.
 
-1. [`app/_layout.tsx`](../app/_layout.tsx) — `[FLOW-01]`, `[FLOW-01 / 1단계]`
-   - `QueryClientProvider`와 Root `Stack`의 위치를 확인한다.
-   - hydration gate가 Root layout 전체를 막지 않는다는 점을 본다.
-2. [`app/index.tsx`](../app/index.tsx) — `[FLOW-01 / 2단계]`
-   - `hasHydrated` selector와 loading branch를 확인한다.
-3. [`src/store/app-store.ts`](../src/store/app-store.ts) — `[FLOW-01 / 3단계]`
-   - `secureStorage.getItem`과 persist key를 확인한다.
-   - `partializeAppState`가 무엇을 저장하지 않는지도 본다.
-4. 같은 파일 — `[FLOW-01 / 4단계]`
-   - `mergePersistedAppState`의 runtime guard와 `onRehydrateStorage` 성공·실패 경로를 비교한다.
-5. [`app/index.tsx`](../app/index.tsx) — `[FLOW-01 / 5단계]`
-   - `DemoShell`이 hydration 이후 처음 mount되는 지점을 확인한다.
+```text
+[시작]
+├─ 1-A store module 평가 → 2-A SecureStore read → 3-A read 실패
+└─ 1-B RootLayout 자동 render → 2-B selector 구독 → 3-B loading 유지
+   4-A 유효 탭 복원 / 4-B 기본 탭 유지
+→ 5 onRehydrateStorage 완료 callback → 5-A 또는 5-B hasHydrated=true
+→ 6 IndexScreen 자동 재render → 7 DemoShell mount → 8 복원 index 소비 → 9 종료
+```
+
+Source 단계 지도:
+
+- [`app/_layout.tsx`](../app/_layout.tsx): 시작, `1-B`
+- [`src/store/app-store.ts`](../src/store/app-store.ts): `1-A`, `2-A`, `3-A`, `4-A`·`4-B`, `5`, `5-A`·`5-B`
+- [`app/index.tsx`](../app/index.tsx): `2-B`, `3-B`, `6`, `7`
+- [`src/components/DemoShell.tsx`](../src/components/DemoShell.tsx): `8`, `9` 종료
 
 읽으면서 구분할 수 있어야 하는 상태는 세 가지다.
 
@@ -174,20 +179,25 @@ import마다 package 소개를 반복하지 않는다. 같은 library라도 이 
 
 ### FLOW-02: 탭 mount 수명, 전환과 재선택
 
-목표는 “선택되지 않은 tab이 화면에서 보이지 않음”과 “component/WebView가 unmount됨”이 같은 말이 아님을 이해하는 것이다.
+목표는 “선택되지 않은 tab이 화면에서 보이지 않음”과 “component/WebView가 unmount됨”이 같은 말이 아니며, 다른 tab 선택과 현재 tab 재선택의 종료점도 서로 다름을 이해하는 것이다.
 
-1. [`src/components/DemoShell.tsx`](../src/components/DemoShell.tsx) — `[FLOW-02]`, `[FLOW-02 / 1단계]`
-   - persisted `selectedTabIndex`와 child ref 배열을 찾는다.
-2. 같은 파일 — `[FLOW-02 / 2단계]`
-   - 세 `WebTab`과 `NativeUsersScreen`이 조건문 바깥에서 항상 render되는 지점을 본다.
-3. [`src/components/BottomTabBar.tsx`](../src/components/BottomTabBar.tsx) — `[FLOW-02 / 3단계]`
-   - button은 index만 parent에 전달하고 reload 판단을 하지 않는다.
-4. [`src/components/DemoShell.tsx`](../src/components/DemoShell.tsx) — `[FLOW-02 / 4단계]`
-   - 다른 tab 선택은 Zustand index만 바꾼다.
-5. 같은 파일 — `[FLOW-02 / 5단계]`
-   - 현재 tab 재선택은 Web tab `reloadInitial`, native tab `refetch`로 분기한다.
-6. [`src/components/WebTab.tsx`](../src/components/WebTab.tsx) — `[FLOW-02 / 6단계]`
-   - error/history flag를 초기화하고 `reloadKey`를 증가시키는 것을 확인한다.
+```text
+[시작] 1 selectedTabIndex 구독 → 2 공통 tab 배열 → 3 child map
+├─ 4-A Web ref / 4-B native ref 저장 → 5-A / 5-B inactive 표시만 차단
+└─ 6 button press → 7 handleTabSelect
+   ├─ 8-A 다른 tab → 9-A Zustand setter → 10-A partialize → 11-A SecureStore write → 12-A 종료
+   ├─ 8-B Web 재선택 → 9-B reloadInitial → 10-B 새 WebView → 11-B 종료 후 FLOW-03
+   └─ 8-C native 재선택 → 9-C 종료 후 FLOW-07 refetch
+```
+
+Source 단계 지도:
+
+- [`src/components/DemoShell.tsx`](../src/components/DemoShell.tsx): 시작, `1`, `3`, `4-A`, `7`, `8-A`·`8-B`·`8-C`, `9-C`, `12-A`
+- [`src/constants/tabs.ts`](../src/constants/tabs.ts): `2`
+- [`src/components/WebTab.tsx`](../src/components/WebTab.tsx): `4-A`, `5-A`, `9-B`, `10-B`, `11-B`
+- [`src/components/NativeUsersScreen.tsx`](../src/components/NativeUsersScreen.tsx): `4-B`, `5-B`
+- [`src/components/BottomTabBar.tsx`](../src/components/BottomTabBar.tsx): `6`
+- [`src/store/app-store.ts`](../src/store/app-store.ts): `9-A`, `10-A`, `11-A`
 
 함께 읽을 파일:
 
@@ -200,45 +210,61 @@ Web tab은 `opacity: 0`과 input/accessibility 차단을 사용하며 `display: 
 
 ### FLOW-03: 일반 WebView navigation, history와 오류 복구
 
-1. [`src/components/WebTab.tsx`](../src/components/WebTab.tsx) — `[FLOW-03]`, `[FLOW-03 / 1단계]`
-   - `source`, `reloadKey`, progress/error state와 history ref를 역할별로 구분한다.
-2. 같은 파일 — `[FLOW-03 / 2단계]`
-   - `originWhitelist`, JavaScript·storage·cookie, multi-window와 `onShouldStartLoadWithRequest`를 본다.
-3. [`src/services/url-router.ts`](../src/services/url-router.ts) — `[FLOW-03 / 3단계]`
-   - URL을 실행하지 않고 `allow`, `block-http`, `external`, `ignore`, `deep-link` decision으로만 바꾸는 부분을 본다.
-4. [`src/components/DemoShell.tsx`](../src/components/DemoShell.tsx) — `[FLOW-03 / 4단계]`
-   - decision이 Alert, app tab 이동 또는 `Linking.openURL`로 실행되는 switch를 확인한다.
-5. [`src/components/WebTab.tsx`](../src/components/WebTab.tsx) — `[FLOW-03 / 5단계]`
-   - native navigation state의 `canGoBack`·`canGoForward`를 ref에 보관한다.
-6. 같은 파일 — `[FLOW-03 / 6단계]`
-   - `onError`와 `onHttpError`가 app overlay state로 바뀌는 경로를 본다.
-7. 같은 파일 — `[FLOW-03 / 7단계]`
-   - `다시 시도`와 `초기 화면`이 현재 URL reload와 최초 source reset으로 다른 이유를 확인한다.
+이 FLOW는 app이 요청을 만드는 단계, native WebView가 자동 callback을 호출하는 단계, 성공·실패 후 사용자 recovery 단계까지 한 session으로 연결한다.
 
-`loadUrl`도 반드시 함께 읽는다.
+```text
+[시작] 1 WebTab state/ref 준비
+├─ 2-A 첫 document 전 source 교체
+├─ 2-B 열린 document에 location.assign 주입
+└─ 2-C reloadInitial로 새 key
+→ 3 React commit과 native request
+├─ 4-A onShouldStartLoadWithRequest → 5 parent handler → 6 classifier → 7-A~7-E decision
+└─ 4-B Android 최초 source는 policy callback 생략
+→ 8 onLoadStart
+├─ 9-A onNavigationStateChange(start)
+└─ 9-B onLoadProgress 반복
+├─ 10-A onLoad → 11-A onLoadEnd → 12-A onNavigationStateChange(end) → 13-A 성공 종료
+├─ 10-B onError → 11-B onLoadEnd → 13-B 실패 대기
+└─ 10-C onHttpError → 일반 finish event가 이어질 수 있음 → 13-B 실패 대기
+   14-A retry / 14-B 초기 화면 / 14-C back / 14-D forward가 새 navigation을 시작
+```
 
-- 첫 `onLoadEnd` 전: `source` state 교체
-- 첫 load 후: `window.location.assign` 주입
-- `reloadInitial`: key 변경으로 새 document
+Source 단계 지도:
 
-이 차이가 deep link와 bridge의 탭 이동 후 WebView history 유지 여부를 결정한다.
+- [`src/components/WebTab.tsx`](../src/components/WebTab.tsx): 시작, `1`, `2`, `2-A`·`2-B`·`2-C`, `3`, `4-A`·`4-B`, `8`, `9-A`·`9-B`, `10-A`·`10-B`·`10-C`, `11-A`·`11-B`, `12-A`, `13-A`·`13-B`, `14-A`~`14-D`
+- [`src/components/DemoShell.tsx`](../src/components/DemoShell.tsx): `5`, `7-A`~`7-E`
+- [`src/services/url-router.ts`](../src/services/url-router.ts): `6`
+
+`loadUrl`의 `2-A`·`2-B`와 `reloadInitial`의 `2-C` 차이가 deep link와 bridge 탭 이동 뒤 WebView history 유지 여부를 결정한다. Android 최초 `source`만 `4-A`를 거치지 않는다는 점도 함께 읽는다.
 
 관련 test인 [`src/components/WebTab.test.tsx`](../src/components/WebTab.test.tsx)는 WebView 대역의 mount·props·callback을 확인한다. 실제 page load, cookie, native history와 gesture는 test 범위가 아니다.
 
 ### FLOW-04: 새 창 분류와 popup lifecycle
 
-1. [`src/components/DemoShell.tsx`](../src/components/DemoShell.tsx) — `[FLOW-04 / 1단계]`
-   - source tab index와 `targetUrl`을 함께 받는 이유를 본다.
-2. [`src/services/url-router.ts`](../src/services/url-router.ts) — `[FLOW-04 / 2단계]`
-   - parent, external, popup host/scheme 분류를 읽는다.
-3. [`src/components/DemoShell.tsx`](../src/components/DemoShell.tsx) — `[FLOW-04 / 3단계]`
-   - source history load, OS 외부 앱, `popupUrl` state로 실제 실행을 나눈다.
-4. [`src/components/PopupWebView.tsx`](../src/components/PopupWebView.tsx) — `[FLOW-04]`, `[FLOW-04 / 4단계]`
-   - URL 변경마다 popup history/error/key를 초기화하는 effect를 본다.
-5. 같은 파일 — `[FLOW-04 / 5단계]`
-   - popup 내부 navigation에도 일반 URL policy를 재사용한다.
-6. 같은 파일 — `[FLOW-04 / 6단계]`
-   - history back과 modal close의 우선순위를 확인한다.
+```text
+[시작] native WebView가 window.open/_blank 감지
+→ 1 WebTab.onOpenWindow 자동 callback → 2 parent prop → 3 index closure
+→ 4 DemoShell handler → 5 popup classifier
+├─ 6-A parent: source WebTab.loadUrl 뒤 FLOW-03
+├─ 6-B external: FLOW-06 OS branch에서 종료
+└─ 6-C popup state → 7 props render → 8 reset effect → 9 popup WebView mount
+   ├─ 10-A onShouldStartLoadWithRequest / 10-B Android 최초 callback 생략
+   │  └─ 11-A~11-E URL decision
+   └─ 10-C nested onOpenWindow → 10-D handler → 11-F 또는 11-G
+→ 12-A load start / 12-B progress / 12-C navigation state
+├─ 13-A 성공 종료
+└─ 13-B 일반 오류 / 13-C HTTP 오류 → 14-B 실패 대기
+   ├─ 15-A retry로 load callback 복귀
+   └─ 15-B error close
+16-A Modal back / 16-B hardware back / 16-C header close → 17 공통 close → 18 종료
+```
+
+Source 단계 지도:
+
+- [`src/components/WebTab.tsx`](../src/components/WebTab.tsx): 시작, `1`, `2`
+- [`src/components/DemoShell.tsx`](../src/components/DemoShell.tsx): `3`, `4`, `6-A`·`6-B`·`6-C`, `16-B`, `17`, `18`
+- [`src/services/url-router.ts`](../src/services/url-router.ts): `5`
+- [`src/components/PopupWebView.tsx`](../src/components/PopupWebView.tsx): `7`~`9`, `10-A`~`10-D`, `11-A`~`11-G`, `12-A`~`12-C`, `13-A`~`13-C`, `14-B`, `15-A`·`15-B`, `16-A`·`16-C`
 
 추가 확인 지점:
 
@@ -251,23 +277,33 @@ Web tab은 `opacity: 0`과 input/accessibility 차단을 사용하며 `display: 
 
 이 흐름은 입력을 신뢰하지 않는 경계와 비동기 response가 원래 WebView로 돌아가는 과정을 함께 읽는다.
 
-1. [`src/web/local-html.ts`](../src/web/local-html.ts) — `[FLOW-05]`, `[FLOW-05 / 1단계]`
-   - template literal 내부 `sendNative`와 button `onclick`을 찾는다.
-   - 이 파일의 문자열 내부는 실제 WebView payload이므로 TypeScript 설명 주석을 삽입하지 않는다는 `[주의]`도 읽는다.
-2. [`src/components/WebTab.tsx`](../src/components/WebTab.tsx) — `[FLOW-05 / 2단계]`
-   - `onMessage`가 string data를 shell로 올리고 Promise response를 받는다.
-3. [`src/components/DemoShell.tsx`](../src/components/DemoShell.tsx) — `[FLOW-05 / 3단계]`
-   - dispatcher에 현재 ref·state setter·service를 dependency로 주입한다.
-4. [`src/bridge/schema.ts`](../src/bridge/schema.ts) — `[FLOW-05 / 4단계]`
-   - strict discriminated union과 action별 tuple을 비교한다.
-5. [`src/bridge/dispatcher.ts`](../src/bridge/dispatcher.ts) — `[FLOW-05 / 5단계]`
-   - switch가 좁혀진 params를 dependency로 보내고 공통 envelope를 만드는 부분을 읽는다.
-6. 대표 service인 [`src/services/device-id.ts`](../src/services/device-id.ts) — `[FLOW-05 / 6단계]`
-   - SecureStore 우선, 없으면 UUID 생성, 실패 Promise cache 해제 순서를 본다.
-7. [`src/components/WebTab.tsx`](../src/components/WebTab.tsx) — `[FLOW-05 / 7단계]`
-   - response 이중 직렬화와 `injectJavaScript`를 확인한다.
-8. [`src/web/local-html.ts`](../src/web/local-html.ts) 마지막 — `[FLOW-05 / 8단계]`
-   - payload 내부 `calledByNative`가 error, UUID와 사진 result를 처리하는 방식을 본다.
+```text
+[시작] button onclick → 1 sendNative request 생성 → 2 postMessage
+→ 3 native WebTab.onMessage 자동 callback → 4 onBridgeMessage(data)
+→ 5 DemoShell index closure → 6 handleBridgeMessage → 7 fallback field 읽기
+→ 8 JSON/Zod validation → 9 action switch
+├─ 10-A~10-H action 선택 → 11-A~11-H dependency 실행 → 필요한 12-A/12-C/12-H 완료
+└─ validation/dependency 오류 → 12-B catch
+→ 13-A success / 13-B failure envelope → 14 dispatcher Promise fulfill
+→ 15 handleBridgeMessage return → prop과 closure를 역순으로 통과
+→ 16 WebTab의 .then(response) → 17 injectJavaScript
+→ 18 calledByNative parse → 19 화면 반영 후 종료
+```
+
+`onMessage`의 `void`는 React Native event callback 자체가 Promise를 반환하지 않게 할 뿐이다. `onBridgeMessage(...)`가 만든 Promise와 그 `.then(...)`은 취소되지 않으며, `14`~`17`단계가 response를 원래 sender WebView로 돌려보낸다.
+
+Source 단계 지도:
+
+- [`src/web/local-html.ts`](../src/web/local-html.ts): 시작, `1`, `2`, `18`, `19`
+- [`src/components/WebTab.tsx`](../src/components/WebTab.tsx): `3`, `4`, `16`, `17`
+- [`src/components/DemoShell.tsx`](../src/components/DemoShell.tsx): `5`, `6`, `11-B`, `11-D`~`11-G`, `15`
+- [`src/bridge/schema.ts`](../src/bridge/schema.ts): `8`
+- [`src/bridge/dispatcher.ts`](../src/bridge/dispatcher.ts): `7`, `9`, `10-A`~`10-H`, `12-B`, `13-A`·`13-B`, `14`
+- [`src/services/device-id.ts`](../src/services/device-id.ts): `11-A`, `12-A`
+- [`src/services/notification-service.ts`](../src/services/notification-service.ts): `11-C`, `12-C`
+- [`src/services/photo-service.ts`](../src/services/photo-service.ts): `11-H`, `12-H`
+
+`local-html.ts`의 template literal 내부는 실제 WebView payload이므로 FLOW 설명은 문자열 바깥에만 둔다.
 
 8개 action의 전체 계약은 다음 파일을 함께 대조한다.
 
@@ -289,20 +325,29 @@ Web tab은 `opacity: 0`과 input/accessibility 차단을 사용하며 `display: 
 
 ### FLOW-06: System deep link, WebView deep link와 외부 앱
 
-1. [`app/+native-intent.tsx`](../app/+native-intent.tsx) — `[FLOW-06 / 1단계]`
-   - Expo Router system path hook이 모든 cold/warm path를 pure rewrite 함수로 보낸다.
-2. [`src/services/native-intent.ts`](../src/services/native-intent.ts) — `[FLOW-06]`, `[FLOW-06 / 2단계]`
-   - demo path만 canonical custom URL로 만들고 index query로 encode한다.
-3. [`src/components/DemoShell.tsx`](../src/components/DemoShell.tsx) — `[FLOW-06 / 3단계]`
-   - `useLocalSearchParams`가 query를 읽는다.
-4. [`src/services/url-router.ts`](../src/services/url-router.ts) — `[FLOW-06 / 4단계]`
-   - custom scheme과 Expo Go `/--/webviewappdemo`를 같은 `DemoDeepLink`로 parse한다.
-5. [`src/components/DemoShell.tsx`](../src/components/DemoShell.tsx) — `[FLOW-06 / 5단계]`
-   - tab 선택과 선택 URL load/refetch를 적용한다.
-6. [`src/services/url-router.ts`](../src/services/url-router.ts) — `[FLOW-06 / 6단계]`
-   - WebView 내부 custom scheme을 OS로 보내지 않고 app 동작으로 분류한다.
-7. [`src/components/DemoShell.tsx`](../src/components/DemoShell.tsx) — `[FLOW-06 / 7단계]`
-   - app이 처리하지 않는 외부 scheme의 `Linking.openURL`과 rejection 안내를 본다.
+```text
+[시작]
+├─ OS: 1-A redirectSystemPath 자동 호출 → 2-A rewrite → 3-A index route → 4-A Router 소비
+│      → 5-A query snapshot → 6-A effect
+├─ 일반 WebView: 1-B policy callback → 2-B parser → 3-B deep-link decision
+├─ popup: 1-C popup decision → 3-C parent callback
+└─ 외부 scheme: 2-D common opener → 3-D Linking.openURL → 4-D 종료
+OS/WebView/popup 입력 → 7 common handler → 8 parseDemoDeepLink
+├─ 9-A invalid 종료
+└─ 9-B valid → 10 applyDeepLink
+   ├─ 11-A Web target → FLOW-03
+   └─ 11-B native target → FLOW-07
+→ 12 boolean caller 반환 → 13-A OS / 13-B WebView / 13-C popup 종료
+```
+
+Source 단계 지도:
+
+- [`src/services/native-intent.ts`](../src/services/native-intent.ts): 시작, `3-A`
+- [`app/+native-intent.tsx`](../app/+native-intent.tsx): `1-A`, `2-A`, `4-A`
+- [`src/components/WebTab.tsx`](../src/components/WebTab.tsx): `1-B`
+- [`src/components/PopupWebView.tsx`](../src/components/PopupWebView.tsx): `1-C`
+- [`src/services/url-router.ts`](../src/services/url-router.ts): `2-B`, `3-B`, `8`
+- [`src/components/DemoShell.tsx`](../src/components/DemoShell.tsx): `2-D`, `3-C`·`3-D`, `4-D`, `5-A`, `6-A`, `7`, `9-A`·`9-B`, `10`, `11-A`·`11-B`, `12`, `13-A`~`13-C`
 
 같이 볼 test:
 
@@ -313,20 +358,33 @@ Web tab은 `opacity: 0`과 input/accessibility 차단을 사용하며 `display: 
 
 ### FLOW-07: Native 사용자 API, schema와 cache/refetch
 
-1. [`src/components/NativeUsersScreen.tsx`](../src/components/NativeUsersScreen.tsx) — `[FLOW-07]`, `[FLOW-07 / 1단계]`
-   - `active`가 Query `enabled`로 들어간다.
-2. [`src/api/users.ts`](../src/api/users.ts) — `[FLOW-07 / 2단계]`
-   - query key, stale time, retry 함수와 enabled를 확인한다.
-3. 같은 파일의 `fetchUsers` — `[FLOW-07 / 3단계]`
-   - AbortSignal, 10초 timeout과 `unknown` response를 본다.
-4. [`src/schemas/user.ts`](../src/schemas/user.ts) — `[FLOW-07 / 4단계]`
-   - Zod가 id/name/email을 검사하고 필요한 필드만 `User[]`로 만든다.
-5. [`src/components/NativeUsersScreen.tsx`](../src/components/NativeUsersScreen.tsx) — `[FLOW-07 / 5단계]`
-   - pending, error/retry, empty, list rendering을 비교한다.
-6. 같은 파일 — `[FLOW-07 / 6단계]`
-   - retry·재선택·pull-to-refresh가 공통 `refetch`를 거친다.
-7. 같은 파일 — `[FLOW-07 / 7단계]`
-   - iOS drag 종료 뒤 Alert 지연과 timer cleanup을 읽는다.
+```text
+[시작] 항상 mount된 NativeUsersScreen
+→ 1 parent active prop → 2 useUsersQuery(active) → 3 useQuery observer 등록
+├─ 4-A inactive: 자동 query function 호출 안 함
+├─ 4-C active commit: 방문 ref를 열어 bridge refresh 허용
+└─ 4-B Query가 queryFn 자동 호출 → 5 Axios GET
+   ├─ 6-A success unknown → 7 Zod parse → 8 cache/observer → 9 render → 10 result effect
+   │  └─ 11-A 최초 error / 11-B 최초 success Alert
+   └─ 6-B retry callback → 한 번 재요청 / 6-C retry 종료 → 8 error cache
+12-A error button / 12-B tab 재선택 / 12-C pull / 12-D bridge
+→ 13 공통 refetch await → 14 결과 Alert 값 구성
+├─ 15-A 일반·Android 즉시 Alert
+└─ 15-B iOS helper
+   ├─ drag 중: 16-A 보류 → 17 onScrollEndDrag → 15-B 재진입
+   └─ drag 종료: 16-B timer → 18 Alert
+→ 19 최신 cache 화면에서 종료
+```
+
+request가 먼저 끝나면 `15-B → 16-A → 17 → 15-B → 16-B → 18`이고, 손을 먼저 놓으면 `17 → 15-B → 16-B → 18`이다. 이 두 순서가 같은 ref와 timer helper로 합류한다.
+
+Source 단계 지도:
+
+- [`src/components/DemoShell.tsx`](../src/components/DemoShell.tsx): `1`, `12-B`
+- [`src/components/NativeUsersScreen.tsx`](../src/components/NativeUsersScreen.tsx): 시작, `2`, `4-C`, `9`~`11`, `12-A`·`12-C`·`12-D`, `13`~`19`
+- [`src/api/users.ts`](../src/api/users.ts): `3`, `4-A`·`4-B`, `5`, `6-A`~`6-C`
+- [`src/schemas/user.ts`](../src/schemas/user.ts): `7`
+- [`src/query-client.ts`](../src/query-client.ts): `8`
 
 관련 test:
 
@@ -338,34 +396,53 @@ Web tab은 `opacity: 0`과 input/accessibility 차단을 사용하며 `display: 
 
 ### FLOW-08: Scroll·bridge·keyboard와 하단 탭
 
-1. [`src/utils/scroll-direction.ts`](../src/utils/scroll-direction.ts) — `[FLOW-08 / 1단계]`
-   - top 복귀, 8px threshold와 up/down 반환을 확인한다.
-2. [`src/components/WebTab.tsx`](../src/components/WebTab.tsx) — `[FLOW-08 / 2단계]`
-   - active WebView의 유효한 방향만 parent로 전달한다.
-   - [`NativeUsersScreen`](../src/components/NativeUsersScreen.tsx)의 `[관련 코드]`도 비교한다.
-3. [`src/components/DemoShell.tsx`](../src/components/DemoShell.tsx) — `[FLOW-08 / 3단계]`
-   - bridge, scroll, keyboard 세 state의 AND 조건을 본다.
-4. 같은 파일 — `[FLOW-08 / 4단계]`
-   - safe-area를 포함한 translateY animation을 확인한다.
-5. [`src/components/BottomTabBar.tsx`](../src/components/BottomTabBar.tsx) — `[FLOW-08 / 5단계]`
-   - bottom inset의 소유자와 base height를 본다.
+```text
+[시작] 하단 탭 표시를 바꾸는 event
+├─ 1-A WebView scroll / 1-B FlatList scroll → 2-A 방향 계산 → 3-A / 3-B child callback
+├─ 1-C keyboard open / 2-C keyboard close
+├─ 1-D tab 선택
+├─ 1-E popup open / 2-E popup close
+├─ 1-F iOS WebView error recovery
+└─ 1-G bridge show/hide → 2-B bridge state
+scroll 출력 → 4-A / 4-B parent setter
+모든 입력 state → 5 AND 계산 → 6 animation effect → 7 위치·pointer input
+→ 8 safe-area padding → 9 종료
+```
+
+Source 단계 지도:
+
+- [`src/components/DemoShell.tsx`](../src/components/DemoShell.tsx): 시작, `1-C`~`1-E`, `1-G`, `2-B`·`2-C`·`2-E`, `4-A`·`4-B`, `5`~`7`, `9`
+- [`src/components/WebTab.tsx`](../src/components/WebTab.tsx): `1-A`, `1-F`, `3-A`
+- [`src/components/NativeUsersScreen.tsx`](../src/components/NativeUsersScreen.tsx): `1-B`, `3-B`
+- [`src/utils/scroll-direction.ts`](../src/utils/scroll-direction.ts): `2-A`
+- [`src/components/BottomTabBar.tsx`](../src/components/BottomTabBar.tsx): `8`
 
 popup open/close, tab 선택, bridge show와 iOS error recovery도 scroll state를 복원할 수 있다. 단일 boolean로 합치지 않은 이유를 `DemoShell`의 각 setter caller를 검색해 확인한다.
 
 ### FLOW-09: Network 표시와 수동 복구
 
-1. [`src/components/DemoShell.tsx`](../src/components/DemoShell.tsx) — `[FLOW-09]`, `[FLOW-09 / 1단계]`
-   - `Network.useNetworkState()` 구독을 확인한다.
-2. 같은 파일 — `[FLOW-09 / 2단계]`
-   - `NONE`만 offline으로 판정하고 `UNKNOWN`은 제외한다.
-3. [`src/components/NetworkStatusBanner.tsx`](../src/components/NetworkStatusBanner.tsx) — `[FLOW-09 / 3단계]`
-   - banner의 mount와 accessibility alert를 본다.
-4. [`src/query-client.ts`](../src/query-client.ts) — `[FLOW-09 / 4단계]`
-   - reconnect 자동 refetch를 끈 정책을 확인한다.
-5. [`src/components/WebTab.tsx`](../src/components/WebTab.tsx) — `[FLOW-09 / 5단계]`
-   - 사용자가 현재 URL을 수동 retry하는 지점을 본다.
+```text
+[시작] useNetworkState 구독 → 1 현재 snapshot → 2 변경 시 자동 render → 3 offline 계산
+→ 4 root·popup banner prop
+├─ 5-A confirmed offline banner mount
+└─ 5-B online/UNKNOWN banner unmount
+WebView·popup·Query request 오류는 별도로 6-A / 6-B / 6-C에 남음
+→ 7 reconnect 자동 Query refetch 차단
+→ 8-A / 8-B / 8-C 사용자 retry
+→ 9-A / 9-B / 9-C 실제 request callback·cache만 결과 갱신
+→ 10 종료
+```
 
-`PopupWebView`, `NativeUsersScreen`의 `[FLOW-09 / 관련 코드]`를 함께 읽으면 다음 세 상태가 독립적임을 확인할 수 있다.
+Source 단계 지도:
+
+- [`src/components/DemoShell.tsx`](../src/components/DemoShell.tsx): 시작, `1`~`4`, `10`
+- [`src/components/NetworkStatusBanner.tsx`](../src/components/NetworkStatusBanner.tsx): `5-A`, `5-B`
+- [`src/components/WebTab.tsx`](../src/components/WebTab.tsx): `6-A`, `8-A`, `9-A`
+- [`src/components/PopupWebView.tsx`](../src/components/PopupWebView.tsx): `6-B`, `8-B`, `9-B`
+- [`src/components/NativeUsersScreen.tsx`](../src/components/NativeUsersScreen.tsx): `6-C`, `8-C`, `9-C`
+- [`src/query-client.ts`](../src/query-client.ts): `7`
+
+이 세 component와 banner 단계를 함께 읽으면 다음 세 상태가 독립적임을 확인할 수 있다.
 
 - OS가 보고한 연결 상태
 - WebView request 오류 state
@@ -520,7 +597,7 @@ JSON 값을 바꾸는 것은 문서 주석 수정이 아니라 native/build conf
 1. 해당 canonical `[FLOW-NN]`을 찾는다.
 2. 이 문서의 단계 링크를 따라간다.
 3. 각 함수의 caller와 consumer를 `rg`로 검색한다.
-4. `[관련 코드]`를 읽어 다른 입력 경로가 있는지 확인한다.
+4. 같은 숫자의 `N-A`, `N-B` branch를 모두 읽어 다른 입력·결과 경로가 있는지 확인한다. 현재 source에는 `[관련 코드]` 표식이 없다.
 5. 같은 이름의 test와 mock provider를 확인한다.
 6. 실제 기기 주장이라면 날짜별 완료 문서의 해당 결과를 별도로 확인한다.
 

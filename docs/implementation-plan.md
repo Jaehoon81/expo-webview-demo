@@ -361,7 +361,7 @@ Android 표적 재검증은 LG `LM-V500N`, Android 12(API 31), Expo Go `54.0.8`�
 - `README.md`: Expo starter 문서를 실제 WebView 데모 앱 안내로 교체한다. 앱 목적과 주요 기능, SDK·실행 전제, 설치·Expo Go·development build 실행, 검사 명령, custom scheme, 주요 경로, 플랫폼별 검증 범위와 문서 링크를 현재 source 기준으로 작성한다.
 - `AGENTS.md`: 반드시 `agents-md-improver` 스킬을 사용한다. 실제 source, config, scripts, tests, `.gitignore`와 문서를 먼저 조사하고 점수화된 품질 보고서와 정확한 수정 제안을 제시한다. 사용자의 명시적 승인 전에는 파일을 수정하지 않는다.
 - `docs/architecture-internals.md`: `AGENTS.md`가 구조·흐름 중심 작업에서 읽도록 연결한다. 실제 디렉터리 지도와 파일 책임, app 시작과 provider, `DemoShell`·탭 lifecycle, WebView·popup·history·error·Android/iOS back, bridge request/response, deep link와 native intent, 사진·알림·device ID, Zustand 영속 상태, Axios·Zod·TanStack Query 사용자 API, network 배너, 하단 탭 animation과 검증 경계를 기술한다.
-- `docs/source-commentary-guide.md`: source에 삽입한 `[파일 역할]`, `[역할]`, `[문법]`, `[라이브러리]`, `[FLOW-NN]`, `[FLOW-NN / N단계]`, `[FLOW-NN / 관련 코드]`, `[이유]`, `[주의]`, `[검증 경계]` 표식과 기능별 시작·종료 구분선의 의미, 주요 흐름별 source 읽기 순서를 정리한다.
+- `docs/source-commentary-guide.md`: source에 삽입한 `[파일 역할]`, `[역할]`, `[문법]`, `[라이브러리]`, `[FLOW-NN]`, `[FLOW-NN / N단계]`, `[FLOW-NN / N-A단계]`, `[이유]`, `[주의]`, `[검증 경계]` 표식과 기능별 시작·종료 구분선의 의미, 주요 흐름별 source 읽기 순서를 정리한다. 과거 `[FLOW-NN / 관련 코드]`는 현재 고유 branch 단계로 대체한다.
 - `docs/learning-guide.md`: 참고 앱 `D:\Development\ReactNative\Workspaces\my-sample-app`의 학습서 구성을 참고하되 이 프로젝트 source와 실제 runtime 결과로 새로 작성한다. 앱 시작·상태 복원, 탭 전환·재선택·reload, local HTML bridge, 일반·popup WebView navigation과 오류 복구, deep link·외부 앱, 사진·알림·device ID, 사용자 API와 cache/refetch, network 단절·복원, scroll·keyboard·하단 탭 흐름을 source link와 함께 따라가도록 구성한다. 각 상태의 수명, caller/consumer, 데이터 변환, 실패·retry와 자동화·build·실기기 증거의 경계도 설명한다.
 - `docs/implementation-plan.md`, 날짜별 검증·handoff 문서와 새 development build·iOS 결과 문서를 최종 source와 대조한다. 오래된 결과는 당시 이력으로 보존하고, 최신 기준과 대체 관계를 명시하며, local link·명령·경로·version·검증 수치가 실제와 일치하는지 확인한다.
 
@@ -372,7 +372,7 @@ Android 표적 재검증은 LG `LM-V500N`, Android 12(API 31), Expo Go `54.0.8`�
 - `[문법]`은 TypeScript·JavaScript·React 문법 이름을 정확히 유지하면서 이 코드에서 값이나 실행 순서가 어떻게 달라지는지 설명하고, `[라이브러리]`는 React Native·Expo SDK 54·project library가 언제 무엇을 해 주는지 설명한다.
 - 주석은 `const`·`return`처럼 보이는 문법을 그대로 읽어 주지 않고 파일 책임, 입력·출력 변환, React state·Zustand persist·TanStack Query cache·WebView history의 수명, 비동기 순서, platform 차이와 선택 이유를 쉬운 한국어로 설명한다.
 - 큰 기능은 keyword가 있는 `=` 시작 구분선과 keyword가 없는 종료 구분선으로, 그 안의 작은 단계는 같은 방식의 `-` 구분선으로 묶는다. 각 시작·종료 선은 짝을 이루고 빈 줄을 사이에 두며 화면에서 보이는 전체 길이를 100칸으로 맞춘다.
-- 각 canonical `[FLOW-NN]`과 `[FLOW-NN / N단계]`는 source 전체에서 한 번만 사용하고, 여러 call site는 `[FLOW-NN / 관련 코드]`로 연결한다. identifier와 API 이름은 번역하거나 변경하지 않는다.
+- 각 canonical `[FLOW-NN]`, `[FLOW-NN / N단계]`, `[FLOW-NN / N-A단계]` 조합은 source 전체에서 한 번만 사용한다. 실제 caller·consumer와 자동 callback은 각각 고유 단계로 연결하고 `[FLOW-NN / 관련 코드]`로 여러 call site를 뭉치지 않는다. identifier와 API 이름은 번역하거나 변경하지 않는다.
 - 주석 작업은 동작 변경과 분리한다. 주석을 달며 결함을 발견하면 즉시 함께 고치지 않고 별도 영향 검토와 사용자 합의가 필요한 source 변경으로 보고한다.
 
 #### 후속 Git commit과 최종 push 경계
@@ -551,3 +551,35 @@ Markdown 감사와 최종 `git diff --check`의 상세 결과는 [5단계 최종
 `architecture-internals.md`의 runtime 구조와 package·test·FLOW 수치는 이번 작업으로 바뀌지 않았다. 날짜별 Android/iOS 문서는 당시 build·설치·실기기 증거를 보존하고 이 최종 인계를 우선하도록 이미 연결돼 있으므로, 새 주석을 과거 runtime 증거처럼 덧붙이지 않았다. Source 실행식·package·config·native build 입력이 바뀌지 않았기 때문에 Expo dependency/Doctor, 새 build·설치·실기기 검증은 반복하지 않는다.
 
 Source·test·tooling 주석은 `42d2a345cf21b8a7999d01541b046ee8373dd5ec` (`Docs: source 주석 학습성과 구분 구조 보강`)로 문서 변경과 분리했다. 현재 주석 계약과 전체 문서 감사 결과는 후속 `Docs:` commit으로 묶으며, 그 최종 SHA는 Git history와 push 뒤 원격 일치 확인을 기준으로 한다.
+
+## 18. 2026-08-19 FLOW 단계 전면 재구성
+
+사용자가 기존 FLOW에서 기능의 시작·종료, caller/consumer, Promise 반환과 React Native·Expo·WebView 자동 callback의 인과 관계가 생략된 문제를 지적했다. 이 후속 작업은 실행식·payload·config를 바꾸지 않고, FLOW가 있는 production source 23개와 현재 학습·architecture 문서의 단계 체계를 전면 재구성했다. 16~17절의 56단계 수치는 당시 완료 이력으로 보존하며 이 절의 현재 수치가 최신 source를 대체한다.
+
+### 18.1 현재 FLOW 계약과 반영 범위
+
+- `FLOW-01`~`FLOW-09`의 각 `[FLOW-NN]`은 `시작:`과 최초 자동 실행 주체 또는 사용자 event를 밝힌다.
+- 공통 경로는 `N단계`, 같은 깊이에서 갈라지는 입력·기능·결과는 `N-A단계`, `N-B단계`로 표시한다. 각 조합은 production source 전체에서 유일하다.
+- 여러 call site를 `[관련 코드]`로 뭉치던 표식은 제거했다. 실제 caller, prop·closure consumer, library callback, Promise 반환과 종료 지점을 각각 고유 단계로 연결했다.
+- 후속 전수 감사에서 FLOW 설명 없이 `[문법]`·`[라이브러리]`를 같은 줄에 붙인 2개 표식을 분리했다. 모든 FLOW 표식 줄은 해당 단계의 독립된 인과 설명을 갖는다.
+- FLOW-03에는 React `source` commit부터 `onShouldStartLoadWithRequest`, load start/progress, 성공·일반 오류·HTTP 오류, `onLoadEnd`, navigation state와 recovery를 연결했다. Android 최초 load의 policy callback 생략도 별도 branch다.
+- FLOW-05에는 `postMessage → onMessage → onBridgeMessage → DemoShell closure → handleBridgeMessage → dispatchBridgeMessage → dependency → Promise fulfill → 역순 return → .then → injectJavaScript → calledByNative` 왕복을 생략 없이 연결했다.
+- FLOW-07에는 TanStack Query의 `enabled`·`queryFn`·retry·cache observer 자동 실행과, iOS pull request 완료/drag 종료 순서가 바뀌는 두 branch 및 timer callback을 연결했다.
+- [`source-commentary-guide.md`](./source-commentary-guide.md)는 9개 전체 단계 지도, [`learning-guide.md`](./learning-guide.md)는 callback·bridge·deep link·Query 학습 순서, [`architecture-internals.md`](./architecture-internals.md)는 현재 runtime 계약으로 갱신했다.
+
+### 18.2 검증 결과
+
+| 검사 | 결과 |
+|---|---|
+| FLOW inventory | 시작 9개 + 단계 229개 = 표식 238개, 중복 0 |
+| 번호 연속성 | FLOW별 `1`부터 최대 단계까지 누락 0 |
+| 이전 묶음 표식 | production source의 `[FLOW-NN / 관련 코드]` 0개 |
+| FLOW 설명 경계 | 비-FLOW 표식 혼합 0, 단계 설명 누락 0 |
+| 비-FLOW 주석 보존 | TypeScript AST comment range 기준 tracked source 43개, HEAD/current 1,443줄 일치, 불일치 0 |
+| Local HTML payload | `src/web/local-html.ts`의 비-FLOW diff 0개 |
+| TypeScript·lint | `npm run typecheck`, `npm run lint` 통과 |
+| Test | Jest 15 suites·50 tests 통과 |
+| 문서 | 실제 source에 없는 FLOW 참조 0, `docs/` 10개 local link 오류 0, code fence 불균형 0 |
+| diff | `git diff --check` 통과 |
+
+실행식, dependency, Expo/native config와 build 입력이 바뀌지 않았으므로 새 build·설치·실기기 검증과 Expo dependency/Doctor 검사는 반복하지 않았다. 이번 자동 검사는 주석이 TypeScript/JSX parsing을 깨지 않았고 기존 test 계약이 유지됐음을 확인하지만, native callback timing을 새로 실기기에서 실행했다는 증거는 아니다.

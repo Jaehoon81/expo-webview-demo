@@ -4,7 +4,7 @@
 
 이 학습서는 React Native의 모든 내용을 다루는 교재가 아니다. 이 앱에서 실제로 사용하는 provider, state, WebView, bridge, 휴대폰 기능, Query가 서로 어떻게 이어지는지 이해하는 데 필요한 내용만 설명한다.
 
-현재 source에는 처음 코드를 보는 사람을 위한 `[역할]`, `[문법]`과 `[라이브러리]` 주석이 있다. 문법이나 API 이름은 정확성을 위해 원문을 유지하지만, 바로 옆에서 그 함수가 실제로 무엇을 하고 왜 필요한지 쉬운 한국어로 설명한다. 큰 기능은 `=` 구분선, 그 안의 작은 단계는 `-` 구분선으로 시작과 끝을 표시한다. 모든 기호를 줄마다 되풀이하지 않고, 값이 바뀌는 방법과 남는 기간, 함수가 불리는 순서, 실제 휴대폰 기능과 이어지는 지점을 중심으로 읽는다. 자세한 표식 규칙과 혼자 읽는 순서는 [소스 주석 읽기 안내서의 주석 표식](./source-commentary-guide.md#1-주석-표식)을 따른다.
+현재 source에는 처음 코드를 보는 사람을 위한 `[역할]`, `[문법]`과 `[라이브러리]` 주석이 있다. 문법이나 API 이름은 정확성을 위해 원문을 유지하지만, 바로 옆에서 그 함수가 실제로 무엇을 하고 왜 필요한지 쉬운 한국어로 설명한다. 큰 기능은 `=` 구분선, 그 안의 작은 단계는 `-` 구분선으로 시작과 끝을 표시한다. FLOW는 `[FLOW-NN]`에서 시작하고, 공통 경로는 `N단계`, 같은 깊이의 입력·기능·결과 branch는 `N-A단계`, `N-B단계`로 나뉘며 각 종료점도 주석에 명시한다. 현재 9개 FLOW의 229개 단계는 production source에서 모두 유일하고 `[관련 코드]` 표식은 사용하지 않는다. 자세한 규칙과 전체 단계 지도는 [소스 주석 읽기 안내서의 주석 표식](./source-commentary-guide.md#1-주석-표식)을 따른다.
 
 ## 이 학습서를 대화에서 사용하는 방법
 
@@ -35,7 +35,7 @@ source를 직접 대조할 때는 다음 순서를 사용한다.
 3. `[역할]`에서 각 함수와 callback이 받는 값, 하는 일과 결과를 보내는 곳을 먼저 파악한다.
 4. `[문법]` 바로 다음 코드에서 값과 type이 실제로 어떻게 달라지는지 말해 본다.
 5. `[라이브러리]`에서 event를 언제 듣고 멈추는지, Query 값은 언제까지 남는지, 휴대폰 기능은 어느 함수에서 불리는지 찾는다.
-6. `[FLOW-NN / N단계]`를 따라 다음 파일로 이동하고 `[관련 코드]`에서 같은 규칙을 쓰는 다른 코드를 확인한다.
+6. `[FLOW-NN / N단계]`를 따라 다음 파일로 이동하고 같은 숫자의 `N-A`, `N-B` branch를 모두 확인한다. callback의 caller와 Promise 반환 consumer가 다음 단계에 이어지는지도 함께 말해 본다.
 7. `[이유]`, `[주의]`, `[검증 경계]`로 현재 방법을 택한 이유와 test가 실제 기기에서 확인하지 못한 부분을 구분한다.
 
 이 구성에서는 다음 내용을 별도 반복 단원으로 만들지 않는다.
@@ -186,9 +186,11 @@ Root Stack mount
 
 #### Source 대조
 
-1. [`app/_layout.tsx`](../app/_layout.tsx)의 `[FLOW-01 / 1단계]`
-2. [`app/index.tsx`](../app/index.tsx)의 loading branch
-3. [`src/components/IndexScreen.test.tsx`](../src/components/IndexScreen.test.tsx)의 DemoShell mock
+1. [`app/_layout.tsx`](../app/_layout.tsx)의 `[FLOW-01]`, `[FLOW-01 / 1-B단계]`
+2. [`src/store/app-store.ts`](../src/store/app-store.ts)의 병행 hydration 경로 `1-A`~`5-B`
+3. [`app/index.tsx`](../app/index.tsx)의 `2-B`, `3-B`, `6`, `7`단계
+4. [`src/components/DemoShell.tsx`](../src/components/DemoShell.tsx)의 `8`, `9`단계
+5. [`src/components/IndexScreen.test.tsx`](../src/components/IndexScreen.test.tsx)의 DemoShell mock
 
 Index screen test는 loading 전후 UI 순서를 확인하지만 Root navigation과 actual custom scheme을 실행하지는 않는다. 이 제한은 test의 `[검증 경계]`에서 바로 확인한다.
 
@@ -291,9 +293,9 @@ native hierarchy: collapsable=false
 
 #### Source 대조
 
-- [`src/components/DemoShell.tsx`](../src/components/DemoShell.tsx) `[FLOW-02 / 2단계]`
-- [`src/components/WebTab.tsx`](../src/components/WebTab.tsx) root View props
-- [`src/components/NativeUsersScreen.tsx`](../src/components/NativeUsersScreen.tsx) root View와 `hidden`
+- [`src/components/DemoShell.tsx`](../src/components/DemoShell.tsx) `[FLOW-02 / 3단계]`
+- [`src/components/WebTab.tsx`](../src/components/WebTab.tsx) `[FLOW-02 / 5-A단계]`와 root View props
+- [`src/components/NativeUsersScreen.tsx`](../src/components/NativeUsersScreen.tsx) `[FLOW-02 / 5-B단계]`, root View와 `hidden`
 - [`src/components/WebTab.test.tsx`](../src/components/WebTab.test.tsx) 첫 test
 
 ### 3-3. 다른 tab 선택과 현재 tab 재선택
@@ -421,6 +423,22 @@ source tab index를 함께 전달해야 parent decision이 어느 WebView histor
 - `다시 시도`: 현재 URL과 history context에서 `reload()`
 - `초기 화면`: tab 최초 source와 새 WebView instance
 
+#### 등록된 WebView callback의 자동 호출 순서
+
+이 프로젝트는 Expo SDK 54가 안내하는 `react-native-webview` `13.15.0`을 사용한다. [Expo SDK 54 WebView 문서](https://docs.expo.dev/versions/v54.0.0/sdk/webview/)와 [13.15.0 prop reference](https://github.com/react-native-webview/react-native-webview/blob/v13.15.0/docs/Reference.md)를 현재 설치 source와 대조하면 `WebTab`의 인과 순서는 다음과 같다.
+
+| 상황 | 자동 호출 주체와 순서 | FLOW-03 |
+|---|---|---|
+| React가 `key`·`source`를 commit | platform WebView가 URL request 시작 | `3` |
+| navigation 허용 판단 | Android 최초 load를 제외하고 native/library가 `onShouldStartLoadWithRequest`; `true`면 계속, `false`면 중단 | `4-A` 또는 `4-B` → `5`~`7` |
+| 허용된 load 시작 | `onLoadStart` → `onNavigationStateChange(start)`; 진행 중 `onLoadProgress` 반복 | `8` → `9-A`, 병행 `9-B` |
+| 성공 종료 | `onLoad` → `onLoadEnd` → `onNavigationStateChange(end)` | `10-A` → `11-A` → `12-A` → `13-A` |
+| 일반 load 실패 | `onError` → `onLoadEnd`; 설치 wrapper의 error handler는 이 경로에서 완료 navigation update를 호출하지 않음 | `10-B` → `11-B` → `13-B` |
+| HTTP status 오류 | `onHttpError`는 일반 transport error와 별도 callback이며 이후 finish event가 이어질 수 있음 | `10-C` → `13-B` |
+| page message·새 창 | `postMessage`는 `onMessage`, `window.open`/`_blank`는 `onOpenWindow`를 자동 호출 | FLOW-05 `3`, FLOW-04 `1` |
+
+`onNavigationStateChange` 하나는 시작과 성공 종료 때 모두 호출되므로 source에는 callback 내부에 `9-A`와 `12-A`가 함께 있다. 반대로 callback을 등록하지 않은 lifecycle이 자동으로 app state를 바꾼다고 추정하지 않는다. `PopupWebView`는 자신이 실제 등록한 `onLoadStart`, `onLoadProgress`, `onNavigationStateChange`, `onError`, `onHttpError`만 FLOW-04 `12-A`~`13-C`로 연결한다.
+
 iOS error recovery ref는 다음 구간에만 true다.
 
 ```text
@@ -490,6 +508,24 @@ Zod error의 세부 path를 WebView에 그대로 노출하지 않고 공통 사�
 ### 5-3. Response를 원래 WebView로 돌려보내기
 
 `WebTab.onMessage`는 자신이 받은 message를 parent callback으로 보낸다. `DemoShell`의 callback은 source tab index를 closure로 알고 있으므로 reloadOtherTabs에서 sender를 제외할 수 있다.
+
+요청과 반환을 생략 없이 펼치면 다음과 같다.
+
+```text
+FLOW-05 / 3  native WebView가 WebTab.onMessage(event)를 자동 호출
+  → 4  WebTab이 onBridgeMessage(data)를 호출하고 .then을 등록
+  → 5  DemoShell의 tab.index closure가 handleBridgeMessage(index, data) 호출
+  → 6  handleBridgeMessage가 dispatchBridgeMessage(...) 호출
+  → 7~13  fallback 읽기, validation, action dependency, response envelope
+  → 14  dispatchBridgeMessage Promise가 BridgeResponse로 fulfill
+  → 15  handleBridgeMessage가 같은 Promise를 return
+  → 5의 closure와 4의 prop 반환 경로를 역순으로 통과
+  → 16  WebTab에 등록된 .then(response) 실행
+  → 17  injectBridgeResponse(response)
+  → 18~19  원래 WebView의 calledByNative가 parse하고 화면 반영 후 종료
+```
+
+`void onBridgeMessage(...).then(...)`의 `void`는 `onMessage` callback이 Promise를 React Native 쪽으로 반환하지 않는다는 뜻이다. Promise 내부 실행이나 `.then` 연결을 취소하는 문법은 아니다. 따라서 dispatcher가 만든 `BridgeResponse`는 `14`~`17`단계를 따라 원래 `WebTab` instance에 도착한다.
 
 response injection은 두 번 직렬화한다.
 
@@ -600,6 +636,19 @@ type DemoDeepLink = {
 
 `DemoShell.applyDeepLink`는 tab을 선택하고 Web tab URL 또는 native refetch를 적용한다. route query는 처리 뒤 제거해 같은 입력이 render마다 반복되지 않게 한다.
 
+FLOW-06의 입력 branch는 서로 다른 곳에서 시작하지만 `7`단계 공통 handler와 `8`단계 parser에서 합류한다.
+
+```text
+OS: 1-A → 2-A → 3-A → 4-A → 5-A → 6-A
+WebTab: 1-B → 2-B → 3-B
+popup: 1-C → 3-C
+                 ↓
+             7 → 8 → 9-A invalid 종료
+                   └→ 9-B valid → 10 → 11-A Web / 11-B native
+                     → 12 boolean caller 반환 → 13-A~13-C 종료
+외부 scheme: 2-D → 3-D Linking.openURL → 4-D 종료
+```
+
 ### 6-3. WebView 내부 link와 OS 외부 앱
 
 같은 custom scheme을 WebView 안에서 누르면 URL classifier가 app deep link로 가로챈다. 이 경우 OS intent round-trip 없이 같은 `applyDeepLink`를 호출한다.
@@ -673,7 +722,15 @@ stale time이 남아 있어도 `refetch()`를 직접 호출하면 network 요청
 
 최초 active fetch가 끝났을 때는 `handledInitialResultRef`로 한 번만 자동 Alert를 표시한다. 이후 명시적 refetch는 refetch 함수의 await 결과를 사용해 별도 Alert를 만든다.
 
-iOS pull-to-refresh에서는 refetch Promise가 손을 떼기 전에 끝날 수 있다. Alert가 gesture와 refresh control을 가로막지 않도록 drag 중이면 결과를 ref에 대기시키고 `onScrollEndDrag` 뒤 timer로 표시한다. Android는 즉시 표시한다.
+iOS pull-to-refresh에서는 refetch Promise와 손을 떼는 event 중 어느 것이 먼저 올지 정해져 있지 않다. Alert가 gesture와 refresh control을 가로막지 않도록 drag 중이면 결과를 ref에 대기시키고 `onScrollEndDrag` 뒤 timer로 표시한다. Android는 즉시 표시한다.
+
+```text
+request 먼저: 15-B helper → 16-A pending ref → 17 onScrollEndDrag
+             → 15-B helper 재진입 → 16-B timer → 18 Alert
+손을 먼저 놓음: 17 onScrollEndDrag → request 완료 → 15-B helper
+               → 16-B timer → 18 Alert
+일반/Android: 14 결과 구성 → 15-A 즉시 Alert
+```
 
 component unmount 시 timer cleanup이 없으면 이미 사라진 tab tree 위에 늦은 Alert가 뜰 수 있다.
 
@@ -743,16 +800,17 @@ dependency array가 바뀌면 effect cleanup 뒤 다시 등록될 수 있다. �
 
 ```text
 Web DOM button
-  → postMessage request string
-  → WebTab onMessage
-  → DemoShell dependency injection
-  → Zod action/tuple validation
-  → dispatcher goToAnotherTab
+  → FLOW-05 / 1 request 생성 → 2 postMessage
+  → 3 WebTab onMessage 자동 호출 → 4 onBridgeMessage(data)
+  → 5 tab.index closure → 6 handleBridgeMessage → 7~9 parse와 action 선택
+  → 10-E goToAnotherTab branch → 11-E DemoShell dependency
   → tag → index, target URL → HTTPS normalization
   → Zustand selected tab 변경
   → existing WebTab.loadUrl 또는 NativeUsersScreen.refetch
-  → BridgeResponse
-  → original source WebView calledByNative
+  → 13-A success envelope → 14 dispatcher Promise fulfill
+  → 15 handleBridgeMessage return → prop 반환 경로를 역순으로 통과
+  → 16 원래 WebTab의 .then → 17 injectJavaScript
+  → 18 calledByNative parse → 19 원래 source WebView 반영 후 종료
 ```
 
 이 한 흐름 안에서도 다음 state는 합쳐지지 않는다.
