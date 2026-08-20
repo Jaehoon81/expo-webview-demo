@@ -116,6 +116,12 @@ export const WebTab = forwardRef<WebTabHandle, WebTabProps>(function WebTab(
   // [역할] `hasLoadedDocumentRef`는 JavaScript를 실행할 웹 문서가 준비됐는지 기억합니다.
   // 첫 웹 문서가 열렸는지 기억합니다. `loadUrl`은 이 값에 따라 URL을 미리 저장할지, 열린 문서에서 바로 이동할지 정합니다.
   const hasLoadedDocumentRef = useRef(false);
+  // [역할] `currentUrlRef`는 native navigation callback이 마지막으로 알려 준 현재 문서 URL을 같은 WebView session 동안 기억합니다.
+  // Android `loadUrl`은 이 값을 보고 같은 URL은 reload하고, 다른 URL은 기존 history에 새 항목으로 이어 엽니다.
+  const currentUrlRef = useRef<string | null>(null);
+  // [역할] `androidSourceUsesExplicitGetRef`는 같은 target을 다시 요청해도 React Native가 새 source prop으로 전달하도록 GET 표기를 번갈아 기억합니다.
+  // method 생략과 명시적 `GET`은 같은 요청이지만, native Back 뒤에도 RNWV의 `source` setter를 다시 실행할 수 있게 source 모양은 달라집니다.
+  const androidSourceUsesExplicitGetRef = useRef(false);
   // [역할] `previousScrollOffsetRef`는 다음 스크롤 방향을 계산할 직전 세로 위치를 기억합니다.
   // 직전에 스크롤한 세로 위치입니다. 다음 위치와 비교해 위로 움직였는지 아래로 움직였는지 알아냅니다.
   const previousScrollOffsetRef = useRef(0);
@@ -199,6 +205,10 @@ export const WebTab = forwardRef<WebTabHandle, WebTabProps>(function WebTab(
     canGoBackRef.current = false;
     canGoForwardRef.current = false;
     hasLoadedDocumentRef.current = false;
+    // 새 WebView는 아직 navigation event를 보내지 않았으므로 이전 session의 현재 URL도 함께 비웁니다.
+    currentUrlRef.current = null;
+    // 새 session의 최초 source부터 다시 시작하므로 Android source 표기 순서도 초기값으로 되돌립니다.
+    androidSourceUsesExplicitGetRef.current = false;
     setSource(initialSource);
     // [역할] 이 state updater는 React가 가진 최신 reloadKey에 1을 더해 새 WebView 생성을 요청합니다.
     // [문법] `setReloadKey((value) => value + 1)`은 오래된 값이 아니라 React가 가진 최신 값에 1을 더합니다.
@@ -223,6 +233,35 @@ export const WebTab = forwardRef<WebTabHandle, WebTabProps>(function WebTab(
         setLoadError(null);
 
         if (hasLoadedDocumentRef.current) {
+          if (Platform.OS === "android") {
+            // [FLOW-03 / 2-D단계] Android의 app-initiated native load는 policy callback을 자동 호출하지 않으므로 기존 parent URL 판단을 먼저 직접 요청합니다.
+            // [주의] `source` 변경은 native `loadUrl()`로 이어지지만 Android는 그 요청에 `onShouldStartLoadWithRequest`를 다시 호출하지 않습니다.
+            const shouldStartLoad = onNavigationRequest(url);
+            if (!shouldStartLoad) {
+              // [FLOW-03 / 2-E단계] 종료(Android 차단): policy가 false이면 source·history·reload 명령을 바꾸지 않고 caller로 돌아갑니다.
+              return;
+            }
+
+            if (currentUrlRef.current === url) {
+              // [FLOW-03 / 2-F단계] 종료(Android 동일 URL): RNWV의 same-URL source no-op 대신 native `reload()`로 현재 문서를 다시 요청합니다.
+              webViewRef.current?.reload();
+              return;
+            }
+
+            // [FLOW-03 / 2-G단계] 허용된 다른 URL은 같은 key의 `source`만 바꿔 RNWV Android의 native `loadUrl()`과 history event를 시작합니다.
+            // [이유] page-side `location.assign` 대신 참고 앱과 같은 native load 경로를 사용해야 Android back history가 이전 문서를 가리킵니다.
+            // native Back 뒤에는 현재 URL만 이전 문서가 되고 React의 source는 target에 남습니다. 같은 target을 다시 눌러도 prop update가 생기도록 동등한 GET 표기를 번갈아 씁니다.
+            androidSourceUsesExplicitGetRef.current =
+              !androidSourceUsesExplicitGetRef.current;
+            setSource(
+              androidSourceUsesExplicitGetRef.current
+                ? { uri: url, method: "GET" }
+                : { uri: url },
+            );
+            return;
+          }
+
+          // [이유] Android branch는 위에서 모두 반환하므로 기존 `location.assign` 경로는 iOS WebView history 방식을 그대로 유지합니다.
           // [FLOW-03 / 2-B단계] 준비된 document가 있으면 `location.assign(url)`을 주입해 같은 native instance와 history에서 이동합니다.
           // 웹 문서가 이미 열려 있으면 `location.assign`을 실행합니다. 같은 WebView를 쓰므로 기존 뒤로 가기 기록이 남습니다.
           const serializedUrl = JSON.stringify(url);
@@ -264,7 +303,7 @@ export const WebTab = forwardRef<WebTabHandle, WebTabProps>(function WebTab(
       injectBridgeResponse,
     }),
     // 아래 함수 가운데 하나가 실제로 바뀔 때만 DemoShell이 받는 ref 명령 묶음을 새로 만듭니다.
-    [injectBridgeResponse, reloadInitial],
+    [injectBridgeResponse, onNavigationRequest, reloadInitial],
   );
 
   // ===============================================================================================
@@ -361,6 +400,8 @@ export const WebTab = forwardRef<WebTabHandle, WebTabProps>(function WebTab(
         onNavigationStateChange={(navigationState) => {
           // [FLOW-03 / 9-A단계] library는 `onLoadStart` 뒤 같은 시작 navigation 값을 이 prop에 전달해 history ref를 갱신합니다.
           // [FLOW-03 / 12-A단계] 성공 시에는 `onLoad`와 `onLoadEnd` 뒤 완료 navigation 값으로 같은 ref를 한 번 더 갱신합니다.
+          // Android 공개 명령은 이 URL과 다음 target을 비교해 native load와 same-URL reload를 구분합니다.
+          currentUrlRef.current = navigationState.url;
           canGoBackRef.current = navigationState.canGoBack;
           canGoForwardRef.current = navigationState.canGoForward;
         }}

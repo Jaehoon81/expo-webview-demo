@@ -86,6 +86,27 @@ function renderWebTab(
   );
 }
 
+// Android URL 명령 test는 실제 DemoShell policy와 같은 boolean callback을 직접 관찰해야 하므로 별도 helper로 만듭니다.
+// [역할] `renderWebTabWithNavigationPolicy`는 test가 지정한 URL 허용 함수를 ref 명령과 함께 WebTab에 전달합니다.
+function renderWebTabWithNavigationPolicy(
+  onNavigationRequest: (url: string) => boolean,
+  forwardedRef: Ref<WebTabHandle>,
+) {
+  return (
+    <WebTab
+      active
+      bottomContentInset={0}
+      initialSource={{ uri: "https://example.com" }}
+      onBridgeMessage={jest.fn().mockResolvedValue({})}
+      onNavigationRequest={onNavigationRequest}
+      onOpenWindow={jest.fn()}
+      onScrollDirection={jest.fn()}
+      ref={forwardedRef}
+      tag="f1"
+    />
+  );
+}
+
 // =================================================================================================
 
 // ========================================== test cases ===========================================
@@ -174,6 +195,8 @@ describe("WebTab", () => {
 
   // [역할] 이 test callback은 첫 load 뒤 `loadUrl`이 기존 history를 잇고 초기화 명령만 WebView를 다시 만드는지 확인합니다.
   it("load 완료 후 반복 loadUrl은 기존 WebView의 history에 이어서 탐색한다", async () => {
+    // [검증 경계] 기존 `location.assign` 계약은 iOS JavaScript branch로 고정해 Android native source 분기와 따로 확인합니다.
+    jest.replaceProperty(Platform, "OS", "ios");
     const webTabRef = createRef<WebTabHandle>();
     await render(renderWebTab(true, jest.fn(), webTabRef));
     const webView = screen.getByTestId("web-view-f1");
@@ -210,6 +233,164 @@ describe("WebTab", () => {
 
     expect(mockWebViewDidMount).toHaveBeenCalledTimes(2);
     expect(mockWebViewDidUnmount).toHaveBeenCalledTimes(1);
+  });
+
+  // [역할] 이 test callback은 Android의 허용된 다른 URL이 policy를 거쳐 같은 WebView의 native source로 전달되는지 확인합니다.
+  it("Android load 완료 후 다른 URL은 policy를 거쳐 native source로 연다", async () => {
+    // 실제 Android WebView 대신 JavaScript 분기와 React source 변경, mount 수명만 확인합니다.
+    jest.replaceProperty(Platform, "OS", "android");
+    // [역할] 허용 policy mock callback은 다른 HTTPS URL을 native source로 계속 열 수 있게 true를 돌려줍니다.
+    const onNavigationRequest = jest.fn(() => true);
+    const webTabRef = createRef<WebTabHandle>();
+    await render(
+      renderWebTabWithNavigationPolicy(onNavigationRequest, webTabRef),
+    );
+    let webView = screen.getByTestId("web-view-f1");
+
+    // native callback이 현재 URL과 document 준비 완료를 알린 뒤 DemoShell과 같은 ref 명령을 실행합니다.
+    await fireEvent(webView, "navigationStateChange", {
+      canGoBack: false,
+      canGoForward: false,
+      url: "https://example.com",
+    });
+    await fireEvent(webView, "loadEnd");
+
+    // [역할] Android 다른 URL `act` callback은 공개 ref 명령의 policy 확인과 source 갱신을 한 번에 반영합니다.
+    await act(() => {
+      webTabRef.current?.loadUrl("https://m.nate.com");
+    });
+    webView = screen.getByTestId("web-view-f1");
+
+    expect(onNavigationRequest).toHaveBeenCalledWith("https://m.nate.com");
+    expect(webView.props.source).toEqual({
+      uri: "https://m.nate.com",
+      method: "GET",
+    });
+    expect(mockWebViewDidMount).toHaveBeenCalledTimes(1);
+    expect(mockWebViewDidUnmount).not.toHaveBeenCalled();
+    expect(mockInjectJavaScript).not.toHaveBeenCalled();
+    expect(mockReload).not.toHaveBeenCalled();
+  });
+
+  // [역할] 이 test callback은 native Back 뒤 React source와 현재 URL이 달라져도 같은 target 재호출이 새 source prop으로 전달되는지 확인합니다.
+  it("Android Back 뒤 같은 target 재호출도 native source를 다시 전달한다", async () => {
+    jest.replaceProperty(Platform, "OS", "android");
+    // [역할] 반복 호출 허용 policy mock callback은 두 Nate 요청이 모두 Android source 분기까지 진행되게 합니다.
+    const onNavigationRequest = jest.fn(() => true);
+    const webTabRef = createRef<WebTabHandle>();
+    await render(
+      renderWebTabWithNavigationPolicy(onNavigationRequest, webTabRef),
+    );
+    let webView = screen.getByTestId("web-view-f1");
+
+    await fireEvent(webView, "navigationStateChange", {
+      canGoBack: false,
+      canGoForward: false,
+      url: "https://example.com",
+    });
+    await fireEvent(webView, "loadEnd");
+
+    // [역할] 첫 URL 명령 `act` callback은 Nate를 명시적 GET source로 전달합니다.
+    await act(() => {
+      webTabRef.current?.loadUrl("https://m.nate.com");
+    });
+    webView = screen.getByTestId("web-view-f1");
+    expect(webView.props.source).toEqual({
+      uri: "https://m.nate.com",
+      method: "GET",
+    });
+
+    // native history가 Naver로 돌아왔지만 React source는 Nate인 실기기 상태를 callback으로 재현합니다.
+    await fireEvent(webView, "navigationStateChange", {
+      canGoBack: false,
+      canGoForward: true,
+      url: "https://example.com",
+    });
+
+    // [역할] 두 번째 URL 명령 `act` callback은 같은 Nate를 기본 GET 모양으로 바꿔 native source setter를 다시 호출하게 합니다.
+    await act(() => {
+      webTabRef.current?.loadUrl("https://m.nate.com");
+    });
+
+    expect(onNavigationRequest).toHaveBeenNthCalledWith(
+      1,
+      "https://m.nate.com",
+    );
+    expect(onNavigationRequest).toHaveBeenNthCalledWith(
+      2,
+      "https://m.nate.com",
+    );
+    expect(screen.getByTestId("web-view-f1").props.source).toEqual({
+      uri: "https://m.nate.com",
+    });
+    expect(mockWebViewDidMount).toHaveBeenCalledTimes(1);
+    expect(mockWebViewDidUnmount).not.toHaveBeenCalled();
+    expect(mockInjectJavaScript).not.toHaveBeenCalled();
+    expect(mockReload).not.toHaveBeenCalled();
+  });
+
+  // [역할] 이 test callback은 Android app-initiated URL도 기존 navigation policy가 거부하면 아무 load 명령도 만들지 않는지 확인합니다.
+  it("Android loadUrl은 policy가 거부한 URL을 source와 history에 넣지 않는다", async () => {
+    jest.replaceProperty(Platform, "OS", "android");
+    // [역할] 차단 policy mock callback은 HTTP URL을 거부하는 DemoShell 결과처럼 false를 돌려줍니다.
+    const onNavigationRequest = jest.fn(() => false);
+    const webTabRef = createRef<WebTabHandle>();
+    await render(
+      renderWebTabWithNavigationPolicy(onNavigationRequest, webTabRef),
+    );
+    const webView = screen.getByTestId("web-view-f1");
+
+    await fireEvent(webView, "navigationStateChange", {
+      canGoBack: false,
+      canGoForward: false,
+      url: "https://example.com",
+    });
+    await fireEvent(webView, "loadEnd");
+
+    // [역할] Android 차단 URL `act` callback은 공개 ref 명령이 source나 native 명령을 만들지 않는지 확인할 입력을 보냅니다.
+    await act(() => {
+      webTabRef.current?.loadUrl("http://m.naver.com");
+    });
+
+    expect(onNavigationRequest).toHaveBeenCalledWith("http://m.naver.com");
+    expect(screen.getByTestId("web-view-f1").props.source).toEqual({
+      uri: "https://example.com",
+    });
+    expect(mockInjectJavaScript).not.toHaveBeenCalled();
+    expect(mockReload).not.toHaveBeenCalled();
+  });
+
+  // [역할] 이 test callback은 Android의 현재 URL 재호출이 RNWV source no-op 대신 명시적 reload 한 번으로 이어지는지 확인합니다.
+  it("Android loadUrl은 현재 URL과 같으면 native reload를 실행한다", async () => {
+    jest.replaceProperty(Platform, "OS", "android");
+    // [역할] 동일 URL 허용 policy mock callback은 reload 분기까지 진행할 수 있게 true를 돌려줍니다.
+    const onNavigationRequest = jest.fn(() => true);
+    const webTabRef = createRef<WebTabHandle>();
+    await render(
+      renderWebTabWithNavigationPolicy(onNavigationRequest, webTabRef),
+    );
+    const webView = screen.getByTestId("web-view-f1");
+
+    await fireEvent(webView, "navigationStateChange", {
+      canGoBack: true,
+      canGoForward: false,
+      url: "https://example.com",
+    });
+    await fireEvent(webView, "loadEnd");
+
+    // [역할] Android 동일 URL `act` callback은 공개 ref 명령을 불러 RNWV same-source no-op 대신 reload를 선택하게 합니다.
+    await act(() => {
+      webTabRef.current?.loadUrl("https://example.com");
+    });
+
+    expect(onNavigationRequest).toHaveBeenCalledWith("https://example.com");
+    expect(mockReload).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId("web-view-f1").props.source).toEqual({
+      uri: "https://example.com",
+    });
+    expect(mockWebViewDidMount).toHaveBeenCalledTimes(1);
+    expect(mockWebViewDidUnmount).not.toHaveBeenCalled();
+    expect(mockInjectJavaScript).not.toHaveBeenCalled();
   });
 
   // [역할] 이 test callback은 loading과 오류 화면이 같은 하단 탭 여백을 사용해 중앙에 놓이는지 확인합니다.
