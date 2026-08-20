@@ -1,12 +1,12 @@
 # Expo WebView 데모 5단계 최종 인계
 
 - 작업일: 2026-08-13
-- 최종 갱신일: 2026-08-14
+- 최종 갱신일: 2026-08-20
 - 작업 경로: `D:\Development\ReactNative\Workspaces\my-webview-app`
 - 기준 branch: `master`
 - 시작 기준 local `HEAD`: `65f5b2d89850b9c72fca593deec579da3c39eae0`
-- 현재 상태: **5단계와 후속 source 주석 학습성 보강·문서 정합성·GitHub closeout 완료**
-- authoritative 계획: [implementation-plan.md](./implementation-plan.md) 11절·16~17절
+- 현재 상태: **5단계와 후속 source 주석 학습성 보강·FLOW 단계 전면 재구성·실제 source 핵심 경로 보강·문서 정합성·GitHub closeout 완료**
+- authoritative 계획: [implementation-plan.md](./implementation-plan.md) 11절·16~19절
 
 이 문서는 5단계 `최종 인계 문서·source 주석·학습서 정리`의 실제 조사, 변경, 검증과 남은 Git 경계를 새 세션에서 복원하기 위한 최신 handoff다. 날짜가 있는 이전 Android/iOS 문서는 당시 build·실기기 증거로 보존하고, 5단계의 최신 source·문서·Git 상태는 이 문서를 우선한다.
 
@@ -325,13 +325,13 @@ git log -1 --format=%H -- docs/2026-08-13-step-5-final-handoff.md
 
 ## 12. 새 세션 재개 순서
 
-1. root `AGENTS.md`, 구현 계획서 11절·16~17절과 이 문서를 읽는다.
+1. root `AGENTS.md`, 구현 계획서 11절·16~19절과 이 문서를 읽는다.
 2. `git status --short`, branch, local/tracking/live remote SHA와 Metro `8081`을 다시 확인한다.
-3. 1~5단계, 2026-08-13 오프라인 후속과 2026-08-14 source 주석 학습성 보강은 완료 상태이므로 요청 없이 build·설치·실기기 검증을 반복하지 않는다.
+3. 1~5단계, 2026-08-13 오프라인 후속, 2026-08-14 source 주석 학습성 보강, 2026-08-19 FLOW 단계 재구성과 2026-08-20 실제 source 핵심 경로 보강은 완료 상태이므로 요청 없이 build·설치·실기기 검증을 반복하지 않는다.
 4. 새 source·config·build 작업은 별도 목표·영향·승인 경계를 먼저 확정한다.
 5. 대화형 학습은 사용자가 지정한 서브 스텝 하나만 source와 다시 대조하며, 질문을 마쳤다는 명시적 확인 전에는 완료를 추정하지 않는다.
 
-현재 정확한 판정은 **5단계 source 주석·최종 문서와 후속 학습성 보강·자동 감사·전체 문서 정합성·GitHub closeout 완료**다.
+현재 정확한 판정은 **5단계 source 주석·최종 문서와 후속 학습성 보강·FLOW 단계 재구성·실제 source 핵심 경로 보강·자동 감사·전체 문서 정합성·GitHub closeout 완료**다.
 
 ## 13. 2026-08-14 source 주석 학습성 보강
 
@@ -368,6 +368,39 @@ git log -1 --format=%H -- docs/2026-08-13-step-5-final-handoff.md
 이번 후속 작업은 source 실행식, `package.json`, lockfile, `app.json`, `eas.json`, native build 입력과 실제 앱 동작을 바꾸지 않았다. 따라서 완료된 Expo dependency/Doctor, Android/iOS build·설치·실기기 검증을 반복하지 않았으며, 이전 runtime 증거는 그대로 유지한다.
 
 Source·test·tooling 주석은 `42d2a345cf21b8a7999d01541b046ee8373dd5ec` (`Docs: source 주석 학습성과 구분 구조 보강`)로 문서 변경과 분리했다. 이 handoff를 포함한 후속 문서 commit은 자신의 SHA를 고정하지 않으며, 정확한 마지막 문서 commit과 원격 반영 상태는 다음 명령과 최종 실행 보고에서 확인한다.
+
+```powershell
+git log -1 --format=%H -- docs/2026-08-13-step-5-final-handoff.md
+git ls-remote --heads origin master
+```
+
+## 14. 2026-08-19 FLOW 단계 전면 재구성
+
+기존 FLOW가 기능의 시작·종료, caller와 consumer, Promise 반환 및 React·Expo Router·native WebView·TanStack Query 자동 callback 사이의 인과관계를 충분히 드러내지 못한다는 사용자 피드백에 따라 production source 23개의 FLOW 단계 체계를 다시 구성했다.
+
+- canonical `FLOW-01`~`FLOW-09` 시작 표식은 각각 실제 최초 caller 또는 자동 호출 주체와 `시작:`을 명시한다.
+- 공통 경로는 `N단계`, 같은 깊이에서 갈라지는 입력·기능·결과는 `N-A단계`, `N-B단계`로 표시하며, 각 조합은 production source 전체에서 한 번만 사용한다.
+- 이전 `[FLOW-NN / 관련 코드]` 표식은 모두 실제 caller·callback·Promise 반환·종료 지점의 고유 단계로 교체했다.
+- 현재 inventory는 시작 9개와 고유 단계 229개로 총 238개이며, 중복·번호 누락·이전 `[관련 코드]` 표식은 0개다.
+- 비-FLOW 주석과 `LOCAL_DEMO_HTML` payload는 보존했고, typecheck·lint·Jest 15 suites·50 tests와 문서 link·code fence 감사를 통과했다.
+
+Source FLOW 변경은 `c86825f` (`Docs: FLOW 단계 주석 전면 재구성`), 학습·architecture 문서 동기화는 `26f6d4c` (`Docs: FLOW 학습 문서와 감사 결과 갱신`)로 분리했다. 이 변경은 실행식·dependency·config·native build 입력을 바꾸지 않았으므로 기존 실기기 결과는 당시 증거로 유지한다.
+
+## 15. 2026-08-20 FLOW-01~09 실제 source 핵심 경로 보강
+
+`source-commentary-guide.md`의 각 FLOW에 기존 설명을 그대로 둔 채, 시작부터 종료까지 이어지는 대표 경로를 실제 source 발췌로 추가했다. 학습자는 단계 제목의 정확한 line link를 열기 전에도 함수·component의 전체 모양과 `↓` 인과 설명을 따라 핵심 흐름을 먼저 파악하고, 기존 단계 지도에서 발췌하지 않은 branch를 이어서 조사할 수 있다.
+
+| 검사 | 결과 |
+|---|---|
+| 기존 안내서 내용 | 삭제·변경 0, 실제 source 핵심 경로만 추가 |
+| FLOW 보강 | FLOW-01~09 각각 1개, 누락·중복 0 |
+| 단계·코드 블록 | 단계 제목 112개와 TypeScript/TSX 발췌 112개 일대일 대응 |
+| 표식·link | 제목의 FLOW 표식이 연결 source 범위에 모두 존재하고 line anchor 범위 오류 0 |
+| 발췌 원문·구조 | 축약 표식 외 코드가 실제 source 순서를 유지하며 112개 블록 parse diagnostic 0 |
+| Markdown | repository 문서의 local link target과 code fence 오류 0, `git diff --check` 통과 |
+| 실행 영향 | Production source·test·payload·package/config·native build 입력 변경 0 |
+
+새 발췌를 찾는 경로는 README와 `learning-guide.md`에 연결했고, 완료·감사 기록은 `implementation-plan.md` 19절과 이 절에 보존했다. Runtime 구조와 과거 build·실기기 증거는 바뀌지 않아 `architecture-internals.md`와 날짜별 Android/iOS 완료 문서는 수정하지 않았다. 이 문서를 포함한 문서 commit의 정확한 SHA와 push 뒤 원격 일치는 자기 참조 SHA를 본문에 고정하지 않고 다음 명령과 최종 실행 보고로 확인한다.
 
 ```powershell
 git log -1 --format=%H -- docs/2026-08-13-step-5-final-handoff.md

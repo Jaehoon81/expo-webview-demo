@@ -583,3 +583,31 @@ Source·test·tooling 주석은 `42d2a345cf21b8a7999d01541b046ee8373dd5ec` (`Doc
 | diff | `git diff --check` 통과 |
 
 실행식, dependency, Expo/native config와 build 입력이 바뀌지 않았으므로 새 build·설치·실기기 검증과 Expo dependency/Doctor 검사는 반복하지 않았다. 이번 자동 검사는 주석이 TypeScript/JSX parsing을 깨지 않았고 기존 test 계약이 유지됐음을 확인하지만, native callback timing을 새로 실기기에서 실행했다는 증거는 아니다.
+
+## 19. 2026-08-20 FLOW-01~09 실제 source 핵심 경로 보강
+
+사용자는 `source-commentary-guide.md`만 읽어도 실제 코드를 바탕으로 각 FLOW의 중심 인과관계를 한눈에 파악할 수 있도록, 기존 설명을 유지한 채 단계별 source 발췌·화살표·정확한 위치 link를 추가하도록 요청했다. 먼저 FLOW-01 형식을 확인한 뒤 같은 기준을 FLOW-02~09에 적용하고, 닫는 태그·들여쓰기·축약 구분·단계 표식·line anchor를 전체 발췌에서 다시 감사했다.
+
+### 19.1 반영 범위와 발췌 계약
+
+- `FLOW-01`~`FLOW-09`의 기존 설명, 흐름도, Source 단계 지도, 상태 표와 test 설명은 삭제하거나 변경하지 않았다.
+- 각 FLOW의 기존 설명 뒤에 `실제 소스로 따라가는 FLOW-NN 핵심 경로`를 한 번씩 추가했다. 모든 branch를 복제하지 않고 시작부터 종료까지 이어지는 대표 경로를 선정했으며, 제외 branch는 첫 문단에서 기존 단계 지도와 실제 source link로 안내한다.
+- 각 단계 제목은 실제 FLOW 핵심 줄의 line anchor를 가리킨다. 발췌 안에는 해당 `[FLOW-NN]` 또는 `[FLOW-NN / N단계]`·`[FLOW-NN / N-A단계]` 표식과 실행 코드를 source 순서 그대로 둔다.
+- 핵심 코드만 고립시키지 않고 소속 함수·객체·React component·callback의 선언과 닫는 구조를 함께 표시한다. 관계없는 부분은 TypeScript의 `// ... 생략 ...` 또는 JSX의 `{/* ... 생략 ... */}`로 구분한다.
+- 코드 블록 사이의 `↓` 설명은 다음 callback의 자동 호출 주체, 앞 단계 출력과 다음 parameter·prop·state의 연결, Promise의 역방향 반환, branch 조건과 최종 화면·state·side effect 중 필요한 인과관계를 밝힌다.
+
+### 19.2 문서·source 대조 결과
+
+| 검사 | 결과 |
+|---|---|
+| 기존 안내서 보존 | `source-commentary-guide.md`의 기존 줄 삭제·변경 0, 새 핵심 경로만 추가 |
+| FLOW 보강 섹션 | FLOW-01~09 각각 1개, 누락·중복 0 |
+| 단계 발췌 | 단계 제목 112개와 TypeScript/TSX 코드 블록 112개가 일대일 대응 |
+| 단계 표식·line anchor | 모든 제목의 단계 표식이 연결된 실제 source 범위에 존재하고, 모든 line anchor가 대상 파일 범위 안에 있음 |
+| 발췌 원문 | 명시적 축약 표식을 제외한 코드 줄이 실제 연결 source에 원래 순서대로 존재 |
+| 구문 구조 | 112개 발췌를 각각 TypeScript/TSX로 parse해 diagnostic 0, Markdown code fence 불균형 0 |
+| 문서 연결 | repository Markdown 전체의 local link target과 source line anchor 오류 0 |
+| 변경 경계 | Production source·test·package/config·native build 입력 변경 0 |
+| diff | `git diff --check` 통과 |
+
+이번 보강은 현재 source를 문서에 더 충실하게 보여 주는 비동작 변경이다. 따라서 완료된 자동 test·Expo 검사·Android/iOS build·설치·실기기 결과를 새 runtime 증거로 반복하지 않는다. `architecture-internals.md`의 구조 계약과 날짜별 완료 문서의 당시 증거도 달라지지 않아 본문을 수정하지 않았으며, 학습 진입 경로와 최신 문서 상태를 설명하는 README·`learning-guide.md`·이 계획서·최종 인계만 함께 동기화한다.

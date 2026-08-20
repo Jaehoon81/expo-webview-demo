@@ -72,7 +72,7 @@ npx expo-doctor
 | `src/web/` | 메인 WebView에 전달하는 로컬 HTML |
 | `app.json`, `eas.json` | app identifier와 EAS internal Preview Build 설정 |
 | `docs/architecture-internals.md` | 현재 source의 구조, 상태 수명과 platform 경계 |
-| `docs/source-commentary-guide.md` | canonical FLOW를 따라 혼자 source를 읽는 안내 |
+| `docs/source-commentary-guide.md` | canonical FLOW의 단계 지도와 실제 source 핵심 경로 발췌를 따라 혼자 읽는 안내 |
 | `docs/learning-guide.md` | 실제 source와 대조하는 대화형 학습 기준 자료 |
 | 그 외 `docs/` | 구현 계획, 실기기 검증과 단계별 handoff |
 
@@ -107,4 +107,4 @@ Android Expo Go의 상세 환경과 단계별 판정은 [Android Expo Go 검증 
 - [대화형 구현 학습서](./docs/learning-guide.md)
 - [2026-08-13 5단계 최종 인계](./docs/2026-08-13-step-5-final-handoff.md)
 
-Production source에는 파일 책임·이유·주의·검증 경계와 `FLOW-01`~`FLOW-09` canonical 주석이 연결되어 있다. Test 파일은 mock이 확인하는 범위와 실제 native/runtime 경계를 첫 주석에서 구분한다.
+Production source에는 파일 책임·이유·주의·검증 경계와 `FLOW-01`~`FLOW-09` canonical 주석이 연결되어 있다. [소스 주석 읽기 안내서](./docs/source-commentary-guide.md)의 각 FLOW에는 기존 전체 단계 지도와 함께, 함수·component의 소속 구조를 유지한 실제 source 발췌와 단계 사이의 인과관계가 대표 핵심 경로로 정리돼 있다. Test 파일은 mock이 확인하는 범위와 실제 native/runtime 경계를 첫 주석에서 구분한다.
