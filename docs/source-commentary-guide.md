@@ -121,9 +121,9 @@ import마다 package 소개를 반복하지 않는다. 같은 library라도 이 
 
 ### 표식 운영 계약
 
-현재 inline 주석 대상은 `app/`·`src/`의 TypeScript/TSX 43개와 `jest.setup.ts`·`eslint.config.js`를 합한 45개다. 이 가운데 production source는 28개, test는 15개, tooling entry는 2개다. JSON, lockfile, generated source와 build output은 이 수에 포함하지 않는다.
+현재 inline 주석 대상은 `app/`·`src/`의 TypeScript/TSX 44개와 `jest.setup.ts`·`eslint.config.js`를 합한 46개다. 이 가운데 production source는 28개, test는 16개, tooling entry는 2개다. JSON, lockfile, generated source와 build output은 이 수에 포함하지 않는다.
 
-- 45개 대상은 모두 `[파일 역할]`로 시작한다. 15개 test는 `[검증 경계]`도 함께 둔다.
+- 46개 대상은 모두 `[파일 역할]`로 시작한다. 16개 test는 `[검증 경계]`도 함께 둔다.
 - 실제 함수와 Hook·event·listener·timer·cleanup·test callback에는 각각 가까운 위치에 `[역할]` 요약을 둔다.
 - 기능 범위는 keyword가 있는 시작 구분선과 keyword가 없는 종료 구분선을 짝지어 표시한다. 큰 범위는 `=`, 그 안의 작은 범위는 `-`를 사용한다.
 - `[문법]`과 `[라이브러리]`는 처음 보는 사람이 바로 다음 코드를 이해할 수 있도록 실제 코드 앞이나 같은 의미 묶음에 둔다.
@@ -399,7 +399,7 @@ export default function IndexScreen() {
 
 ↓ **처음 mount된 `DemoShell`은 merge가 끝난 같은 Zustand store에서 복원된 탭 번호를 읽는다.**
 
-**[FLOW-01 / 8단계]** — [`src/components/DemoShell.tsx:126-130`](../src/components/DemoShell.tsx#L126-L130)
+**[FLOW-01 / 8단계]** — [`src/components/DemoShell.tsx:132-136`](../src/components/DemoShell.tsx#L132-L136)
 
 ```tsx
 export function DemoShell() {
@@ -417,7 +417,7 @@ export function DemoShell() {
 
 ↓ **`selectedTabIndex`는 네 child를 없애고 다시 만드는 조건이 아니라, 어느 child가 처음 활성 상태인지 정하는 prop 비교값이 된다.**
 
-**[FLOW-01 / 9단계 — Web 탭 종료 지점]** — [`src/components/DemoShell.tsx:672-684`](../src/components/DemoShell.tsx#L672-L684)
+**[FLOW-01 / 9단계 — Web 탭 종료 지점]** — [`src/components/DemoShell.tsx:686-698`](../src/components/DemoShell.tsx#L686-L698)
 
 ```tsx
 export function DemoShell() {
@@ -457,7 +457,7 @@ export function DemoShell() {
 
 ↓ **같은 단계의 Native consumer:** 같은 9단계에서 native 탭도 항상 mount되고, 복원값이 `3`일 때만 최초 active가 된다.
 
-**[FLOW-01 / 9단계 — Native 탭 종료 지점]** — [`src/components/DemoShell.tsx:672-679`](../src/components/DemoShell.tsx#L672-L679), [`src/components/DemoShell.tsx:719-722`](../src/components/DemoShell.tsx#L719-L722)
+**[FLOW-01 / 9단계 — Native 탭 종료 지점]** — [`src/components/DemoShell.tsx:686-693`](../src/components/DemoShell.tsx#L686-L693), [`src/components/DemoShell.tsx:733-736`](../src/components/DemoShell.tsx#L733-L736)
 
 ```tsx
 export function DemoShell() {
@@ -546,7 +546,7 @@ export function DemoShell() {
 
 ↓ **React가 `DemoShell`을 render하면 먼저 Zustand selector가 현재 index를 구독하고, 이 값이 child와 하단 버튼에 함께 전달될 기준이 된다.**
 
-**[FLOW-02 / 1단계]** — [`src/components/DemoShell.tsx:126-130`](../src/components/DemoShell.tsx#L126-L130)
+**[FLOW-02 / 1단계]** — [`src/components/DemoShell.tsx:132-136`](../src/components/DemoShell.tsx#L132-L136)
 
 ```tsx
 export function DemoShell() {
@@ -584,7 +584,7 @@ export const TAB_DEFINITIONS: readonly TabDefinition[] = [
 
 ↓ **React는 배열 앞의 세 정의를 조건부 render가 아닌 `map`으로 모두 `WebTab`에 전달한다. 같은 block은 최초 mount에서는 `3`, Zustand 변경 뒤 재render에서는 `12-A` 종료점 역할을 한다.**
 
-**[FLOW-02 / 3단계·12-A단계]** — [`src/components/DemoShell.tsx:672-683`](../src/components/DemoShell.tsx#L672-L683)
+**[FLOW-02 / 3단계·12-A단계]** — [`src/components/DemoShell.tsx:686-697`](../src/components/DemoShell.tsx#L686-L697)
 
 ```tsx
 export function DemoShell() {
@@ -622,7 +622,7 @@ export function DemoShell() {
 
 ↓ **각 `WebTab`이 commit되면 ref callback은 그 child의 명령 객체를 같은 index 칸에 저장한다. 탭 전환은 이 ref나 child identity를 제거하지 않는다.**
 
-**[FLOW-02 / 4-A단계]** — [`src/components/DemoShell.tsx:709-714`](../src/components/DemoShell.tsx#L709-L714)
+**[FLOW-02 / 4-A단계]** — [`src/components/DemoShell.tsx:723-728`](../src/components/DemoShell.tsx#L723-L728)
 
 ```tsx
 export function DemoShell() {
@@ -726,7 +726,7 @@ export function BottomTabBar({
 
 ↓ **`onSelect`는 `DemoShell.handleTabSelect`를 가리킨다. callback은 전달받은 index를 현재 index와 비교하고, 이 핵심 경로에서는 서로 다르므로 재선택 branch를 건너뛰어 Zustand setter를 호출한다.**
 
-**[FLOW-02 / 7단계 → 8-A단계]** — [`src/components/DemoShell.tsx:534-559`](../src/components/DemoShell.tsx#L534-L559)
+**[FLOW-02 / 7단계 → 8-A단계]** — [`src/components/DemoShell.tsx:548-573`](../src/components/DemoShell.tsx#L548-L573)
 
 ```tsx
 export function DemoShell() {
@@ -1045,7 +1045,7 @@ export const WebTab = forwardRef<WebTabHandle, WebTabProps>(function WebTab(
 
 ↓ **`DemoShell`의 prop consumer는 URL을 pure classifier에 넘기고 decision이 돌아올 때까지 boolean 반환을 보류한다.**
 
-**[FLOW-03 / 5단계]** — [`src/components/DemoShell.tsx:359-363`](../src/components/DemoShell.tsx#L359-L363)
+**[FLOW-03 / 5단계]** — [`src/components/DemoShell.tsx:373-377`](../src/components/DemoShell.tsx#L373-L377)
 
 ```tsx
 export function DemoShell() {
@@ -1089,7 +1089,7 @@ export function classifyNavigationUrl(url: string): NavigationDecision {
 
 ↓ **`allow`가 `DemoShell`로 돌아오면 switch는 `true`를 반환한다. 이 값은 prop 반환 경로를 거슬러 native WebView에 도착해 request 계속 여부가 된다.**
 
-**[FLOW-03 / 7-A단계]** — [`src/components/DemoShell.tsx:365-371`](../src/components/DemoShell.tsx#L365-L371)
+**[FLOW-03 / 7-A단계]** — [`src/components/DemoShell.tsx:379-385`](../src/components/DemoShell.tsx#L379-L385)
 
 ```tsx
 export function DemoShell() {
@@ -1512,7 +1512,7 @@ export const WebTab = forwardRef<WebTabHandle, WebTabProps>(function WebTab(
 });
 ```
 
-↓ **사용자가 hardware Back을 누르면 [`DemoShell.tsx:585-590`](../src/components/DemoShell.tsx#L585-L590)의 Android listener가 현재 tab ref의 `goBack()`을 먼저 호출한다. `canGoBackRef=true`이므로 아래 명령은 native history를 네이트에서 네이버로 한 칸 이동시키고 `true`를 반환하며, caller는 앱 종료 안내로 내려가지 않는다.**
+↓ **사용자가 hardware Back을 누르면 [`DemoShell.tsx:599-604`](../src/components/DemoShell.tsx#L599-L604)의 Android listener가 현재 tab ref의 `goBack()`을 먼저 호출한다. `canGoBackRef=true`이므로 아래 명령은 native history를 네이트에서 네이버로 한 칸 이동시키고 `true`를 반환하며, caller는 앱 종료 안내로 내려가지 않는다.**
 
 **[FLOW-03 / 14-C단계]** — [`src/components/WebTab.tsx:279-287`](../src/components/WebTab.tsx#L279-L287)
 
@@ -1649,7 +1649,7 @@ export const WebTab = forwardRef<WebTabHandle, WebTabProps>(function WebTab(
 
 ↓ **`WebTab`은 URL만 parent에 올린다. `DemoShell`이 각 tab을 만들 때 닫아 둔 closure가 해당 WebTab의 `tab.index`를 같은 URL에 붙여 source tab을 식별한다.**
 
-**[FLOW-04 / 3단계]** — [`src/components/DemoShell.tsx:699-703`](../src/components/DemoShell.tsx#L699-L703)
+**[FLOW-04 / 3단계]** — [`src/components/DemoShell.tsx:713-717`](../src/components/DemoShell.tsx#L713-L717)
 
 ```tsx
 export function DemoShell() {
@@ -1680,7 +1680,7 @@ export function DemoShell() {
 
 ↓ **closure가 만든 `(sourceTabIndex, url)` 쌍은 `handleOpenWindow`로 들어간다. handler는 화면을 바로 열지 않고 먼저 pure classifier의 decision을 기다린다.**
 
-**[FLOW-04 / 4단계]** — [`src/components/DemoShell.tsx:398-402`](../src/components/DemoShell.tsx#L398-L402)
+**[FLOW-04 / 4단계]** — [`src/components/DemoShell.tsx:412-416`](../src/components/DemoShell.tsx#L412-L416)
 
 ```tsx
 export function DemoShell() {
@@ -1745,7 +1745,7 @@ export function classifyPopupUrl(url: string): PopupDecision {
 
 ↓ **`popup` decision이 caller로 돌아오면 두 앞 branch를 건너뛴다. URL을 `popupUrl` state에 저장하고 뒤 화면의 하단 tab 입력을 막기 위해 scroll 표시 state도 false로 바꾼다.**
 
-**[FLOW-04 / 6-C단계]** — [`src/components/DemoShell.tsx:417-424`](../src/components/DemoShell.tsx#L417-L424)
+**[FLOW-04 / 6-C단계]** — [`src/components/DemoShell.tsx:431-438`](../src/components/DemoShell.tsx#L431-L438)
 
 ```tsx
 export function DemoShell() {
@@ -2097,7 +2097,7 @@ export const PopupWebView = forwardRef<
 
 ↓ **`onClose` prop은 `DemoShell.closePopup`이다. callback은 `popupUrl`을 null로 만들고 popup 때문에 false였던 scroll 표시 state를 true로 복구하는 두 update를 같은 종료 지점에서 요청한다.**
 
-**[FLOW-04 / 17단계]** — [`src/components/DemoShell.tsx:430-437`](../src/components/DemoShell.tsx#L430-L437)
+**[FLOW-04 / 17단계]** — [`src/components/DemoShell.tsx:444-451`](../src/components/DemoShell.tsx#L444-L451)
 
 ```tsx
 export function DemoShell() {
@@ -2118,7 +2118,7 @@ export function DemoShell() {
 
 ↓ **React가 `popupUrl=null`을 commit하면 `PopupWebView.url`도 null로 다시 전달된다. `Modal.visible`이 false가 되고 stage 8 effect가 닫힘 값에 맞춰 `currentUrl`, history와 error state를 초기화한다.**
 
-**[FLOW-04 / 18단계] 종료** — [`src/components/DemoShell.tsx:758-775`](../src/components/DemoShell.tsx#L758-L775)
+**[FLOW-04 / 18단계] 종료** — [`src/components/DemoShell.tsx:772-789`](../src/components/DemoShell.tsx#L772-L789)
 
 ```tsx
 export function DemoShell() {
@@ -2292,7 +2292,7 @@ export const WebTab = forwardRef<WebTabHandle, WebTabProps>(function WebTab(
 
 ↓ **`onMessage` event callback은 native에 Promise를 반환하지 않지만, 내부에서는 `onBridgeMessage(data)`가 돌려줄 Promise에 `.then(injectBridgeResponse)`를 먼저 등록한다. 요청 방향에서는 같은 JSON 문자열이 `DemoShell` prop closure로 올라간다.**
 
-**[FLOW-05 / 5단계]** — [`src/components/DemoShell.tsx:692-697`](../src/components/DemoShell.tsx#L692-L697)
+**[FLOW-05 / 5단계]** — [`src/components/DemoShell.tsx:706-711`](../src/components/DemoShell.tsx#L706-L711)
 
 ```tsx
 export function DemoShell() {
@@ -2324,7 +2324,7 @@ export function DemoShell() {
 
 ↓ **closure가 source tab index `0`을 붙인 뒤 `handleBridgeMessage(0, message)`를 호출한다. concise arrow function이라 이 handler의 Promise는 새 Promise로 감싸지지 않고 WebTab으로 그대로 반환될 예정이며, 먼저 dispatcher에 실제 service dependency가 주입된다.**
 
-**[FLOW-05 / 6단계]** — [`src/components/DemoShell.tsx:476-485`](../src/components/DemoShell.tsx#L476-L485)
+**[FLOW-05 / 6단계]** — [`src/components/DemoShell.tsx:490-499`](../src/components/DemoShell.tsx#L490-L499)
 
 ```tsx
 export function DemoShell() {
@@ -2534,7 +2534,7 @@ export async function dispatchBridgeMessage(
 
 ↓ **fulfill된 Promise는 새 변환 없이 `handleBridgeMessage`의 concise arrow return으로 돌아간다. 즉 이 handler는 response 객체를 먼저 꺼내는 것이 아니라 dispatcher가 만든 동일한 Promise를 caller에게 돌려준 상태였고, 이제 그 Promise가 완료된다.**
 
-**[FLOW-05 / 15단계 — `handleBridgeMessage` 반환]** — [`src/components/DemoShell.tsx:476-483`](../src/components/DemoShell.tsx#L476-L483)
+**[FLOW-05 / 15단계 — `handleBridgeMessage` 반환]** — [`src/components/DemoShell.tsx:490-497`](../src/components/DemoShell.tsx#L490-L497)
 
 ```tsx
 export function DemoShell() {
@@ -2559,7 +2559,7 @@ export function DemoShell() {
 
 ↓ **그 Promise는 `DemoShell` render 때 만든 `onBridgeMessage` closure의 `handleBridgeMessage(...)` 표현식에서도 그대로 반환되어, 이 prop을 호출했던 원래 `WebTab.onMessage` 위치까지 한 단계 더 역순으로 도착한다.**
 
-**[FLOW-05 / 5단계 — prop closure 반환 경로]** — [`src/components/DemoShell.tsx:692-697`](../src/components/DemoShell.tsx#L692-L697)
+**[FLOW-05 / 5단계 — prop closure 반환 경로]** — [`src/components/DemoShell.tsx:706-711`](../src/components/DemoShell.tsx#L706-L711)
 
 ```tsx
 export function DemoShell() {
@@ -2751,12 +2751,13 @@ Source 단계 지도:
 
 - [`src/services/native-intent.test.ts`](../src/services/native-intent.test.ts)
 - [`src/services/url-router.test.ts`](../src/services/url-router.test.ts)
+- [`src/components/DemoShell.test.tsx`](../src/components/DemoShell.test.tsx)
 
-두 suite는 URL 문자열 계약을 검증한다. package의 scheme registration, Android intent와 iOS app launch는 build·실기기 결과를 읽어야 한다.
+앞의 두 suite는 URL 문자열 계약을 검증하고, DemoShell suite는 current-route navigation의 다음-frame cleanup과 같은 Web query의 Warm 재입력을 mock으로 고정한다. Package의 scheme registration, Android intent와 iOS app launch timing은 build·실기기 결과를 읽어야 한다.
 
 #### 실제 소스로 따라가는 FLOW-06 핵심 경로
 
-아래 발췌의 대표 경로는 OS가 `mywebviewapp://webviewappdemo?target=1&url=m.nate.com`을 전달해 두 번째 Web tab을 선택하고 HTTPS URL을 여는 `1-A → 2-A → 3-A → 4-A → 5-A → 6-A → 7 → 8 → 9-B → 10 → 11-A → 12 → 13-A`다. invalid 입력 `9-A`, native target `11-B`, popup `1-C·3-C·13-C`, 외부 scheme `2-D·3-D·4-D`는 위의 기존 단계 지도와 source 링크에서 별도로 확인한다.
+아래 발췌의 대표 경로는 OS가 `mywebviewapp://webviewappdemo?target=1&url=m.nate.com`을 전달해 두 번째 Web tab을 선택하고 HTTPS URL을 여는 `1-A → 2-A → 3-A → 4-A → 5-A → 6-A → 7 → 8 → 9-B → 10 → 11-A → 12 → 13-A`다. `13-A` cleanup은 mount된 current-route navigation을 사용하되 첫 mount commit 다음 UI frame에 params를 완전히 교체한다. 그래서 Android Cold의 global Router readiness와 분리되고 같은 OS URL의 다음 Warm 입력도 새 query 변경으로 처리된다. invalid 입력 `9-A`, native target `11-B`, popup `1-C·3-C·13-C`, 외부 scheme `2-D·3-D·4-D`는 위의 기존 단계 지도와 source 링크에서 별도로 확인한다.
 
 현재 source를 실제 호출 기준으로 보면 OS와 popup은 `handleDeepLinkUrl`을 호출하지만, 일반 WebView는 `classifyNavigationUrl` 안에서 같은 `parseDemoDeepLink`를 호출한 뒤 `deep-link` decision consumer가 `applyDeepLink`를 직접 호출한다. 따라서 세 입력이 단일 handler 하나를 모두 통과한다고 단순화하지 않고, 아래에서는 WebView B 입구를 함께 발췌해 **공통 parser `parseDemoDeepLink`와 공통 적용 함수 `applyDeepLink`라는 두 합류 지점**을 표시한다.
 
@@ -2834,17 +2835,23 @@ export function rewriteIncomingSystemPath(path: string): string {
 }
 ```
 
-↓ **`redirectSystemPath`가 이 문자열을 반환하면 Expo Router가 이를 소비해 Root `Stack`의 index route를 유지하면서 `demoDeepLink` query를 갱신한다. `useLocalSearchParams`가 decode된 query snapshot을 반환하고 `DemoShell`을 다시 render한다.**
+↓ **`redirectSystemPath`가 이 문자열을 반환하면 Expo Router가 이를 소비해 Root `Stack`의 index route를 유지하면서 `demoDeepLink` query를 갱신한다. `useLocalSearchParams`가 decode된 query snapshot을 반환하고 `DemoShell`을 다시 render한다. 같은 component의 `useNavigation`은 이미 mount된 현재 index route에 연결된 navigation 객체를 반환하며, 처리 effect는 첫 mount commit 다음 UI frame에 이 객체로 params를 교체한다.**
 
-**[FLOW-06 / 5-A단계]** — [`src/components/DemoShell.tsx:112-125`](../src/components/DemoShell.tsx#L112-L125)
+**[FLOW-06 / 5-A단계]** — [`src/components/DemoShell.tsx:112-131`](../src/components/DemoShell.tsx#L112-L131)
 
 ```tsx
 export function DemoShell() {
   // ... 앞선 Hook 생략 ...
 
-  // Router는 한 번 처리한 deep link query를 현재 route에서 지울 때 사용합니다. 같은 값이 다시 실행되는 일을 막습니다.
-  // [역할] `useRouter`는 처리한 deep link query를 현재 route에서 지울 명령을 제공합니다.
-  const router = useRouter();
+  // Router는 한 번 처리한 deep link query를 현재 route에서 완전히 지울 때 사용합니다. 그래야 같은 값이 Warm 실행 중 다시 들어와도 새 query 변경으로 처리됩니다.
+  // [역할] `useNavigation`은 처리한 deep link query를 교체할 현재 route의 navigation 객체를 제공합니다.
+  // [이유] 이미 mount된 route 객체를 사용하면 Android cold start에서 전역 Router ref가 준비되기 전에도 query를 안전하게 지우고, `setParams`의 얕은 병합에 이전 값을 남기지 않습니다.
+  // [문법] generic은 이 화면이 교체하는 query field와 `replaceParams` 입력 모양만 TypeScript에 알려 줍니다.
+  const navigation = useNavigation<{
+    replaceParams(params: {
+      demoDeepLink?: string | string[];
+    }): void;
+  }>();
   // [FLOW-09 / 1단계] `DemoShell` render가 `useNetworkState`를 호출하면 Expo가 연결 상태 구독을 만들고 현재 snapshot을 반환합니다.
   // [라이브러리] 화면이 사라지면 연결 감시는 library가 정리합니다. 이 값은 인터넷 연결 여부일 뿐, 각 웹·API 요청의 성공을 뜻하지 않습니다.
   // [역할] `useNetworkState`는 휴대폰의 현재 연결 종류를 계속 알려 줘 공통 offline 안내에 사용하게 합니다.
@@ -2861,15 +2868,15 @@ export function DemoShell() {
 }
 ```
 
-↓ **React가 query 변경 render를 commit한 뒤 `demoDeepLink` dependency의 effect를 자동 실행한다. 배열이면 첫 값을 고르고, 선택한 문자열을 OS 경로의 `handleDeepLinkUrl(incomingUrl)` 호출에 넣는다.**
+↓ **React가 query 변경 render를 commit한 뒤 `demoDeepLink` dependency의 effect를 자동 실행한다. 배열이면 첫 값을 고르고, 선택한 문자열을 OS 경로의 `handleDeepLinkUrl(incomingUrl)` 호출에 넣는다. 이 effect의 `navigation` 변수는 global `useRouter`가 아니라 위에서 얻은 current-route navigation 객체다.**
 
-**[FLOW-06 / 6-A단계]** — [`src/components/DemoShell.tsx:330-349`](../src/components/DemoShell.tsx#L330-L349)
+**[FLOW-06 / 6-A단계]** — [`src/components/DemoShell.tsx:336-363`](../src/components/DemoShell.tsx#L336-L363)
 
 ```tsx
 export function DemoShell() {
   // ... deep-link parser와 적용 handler 생략 ...
 
-  // 앱을 처음 열었을 때와 이미 실행 중일 때 들어온 route query를 한 번 처리하는 effect입니다. 처리한 값은 바로 지웁니다.
+  // 앱을 처음 열었을 때와 이미 실행 중일 때 들어온 route query를 한 번 처리하는 effect입니다. 처리한 값은 다음 UI frame에 지웁니다.
   // [역할] 이 `useEffect` callback은 route query의 deep link를 한 번 적용하고 같은 값이 반복되지 않도록 지웁니다.
   useEffect(() => {
     // [FLOW-06 / 6-A단계] React commit 뒤 query dependency가 바뀌면 이 effect가 자동 실행되어 첫 문자열을 골라 공통 handler에 보냅니다.
@@ -2884,11 +2891,19 @@ export function DemoShell() {
     }
 
     handleDeepLinkUrl(incomingUrl);
-    // 같은 query가 다음 화면 그리기 때 또 실행되지 않도록 처리한 직후 route param을 지웁니다.
-    // [FLOW-06 / 13-A단계] 종료(OS): 적용 시도 직후 query를 지워 다음 render에서 같은 OS 입력이 반복되지 않게 합니다.
-    router.setParams({ demoDeepLink: undefined });
-    // [문법] dependency 배열의 함수, router, query 가운데 하나가 바뀔 때만 effect가 다시 확인합니다.
-  }, [demoDeepLink, handleDeepLinkUrl, router]);
+    // 같은 query가 현재 navigation state에 남지 않도록 다음 UI frame에 route params를 빈 객체로 완전히 교체합니다.
+    // [이유] Cold 첫 effect와 navigation state 초기화가 겹치면 즉시 보낸 param 교체가 반영되지 않으므로, mount commit 다음 frame까지 기다립니다.
+    const cleanupFrame = requestAnimationFrame(() => {
+      // [FLOW-06 / 13-A단계] 종료(OS): query를 제거해 현재 입력의 중복 적용을 막고, 같은 OS URL의 다음 Warm 입력은 새 변경으로 인식하게 합니다.
+      navigation.replaceParams({});
+    });
+
+    // [역할] effect가 다음 frame 전에 정리되면 예약한 navigation 변경이 사라진 화면에 실행되지 않게 취소합니다.
+    return () => {
+      cancelAnimationFrame(cleanupFrame);
+    };
+    // [문법] dependency 배열의 함수, navigation, query 가운데 하나가 바뀔 때만 effect가 다시 확인합니다.
+  }, [demoDeepLink, handleDeepLinkUrl, navigation]);
 
   // ... 나머지 handler와 JSX 생략 ...
 }
@@ -2965,7 +2980,7 @@ export function classifyNavigationUrl(url: string): NavigationDecision {
 
 ↓ **대표 OS 경로로 돌아오면 effect가 넘긴 canonical URL은 `handleDeepLinkUrl` parameter가 된다. 이 handler도 문자열을 다시 해석하지 않고 동일한 `parseDemoDeepLink(url)` 함수에 그대로 전달한다.**
 
-**[FLOW-06 / 7단계 — OS·popup handler 입구]** — [`src/components/DemoShell.tsx:303-308`](../src/components/DemoShell.tsx#L303-L308)
+**[FLOW-06 / 7단계 — OS·popup handler 입구]** — [`src/components/DemoShell.tsx:309-314`](../src/components/DemoShell.tsx#L309-L314)
 
 ```tsx
 export function DemoShell() {
@@ -3041,7 +3056,7 @@ export function parseDemoDeepLink(value: string): DemoDeepLink | null {
 
 ↓ **OS caller의 handler는 non-null 결과로 `9-B`를 선택해 `applyDeepLink(deepLink)`를 동기 호출한다. 호출이 돌아오면 true를 반환한다. 이 boolean은 OS effect에서 별도로 사용하지 않지만, 같은 handler를 쓰는 popup caller에서는 close 여부가 된다.**
 
-**[FLOW-06 / 9-B단계 → 12단계 — OS handler의 적용 호출과 반환]** — [`src/components/DemoShell.tsx:303-328`](../src/components/DemoShell.tsx#L303-L328)
+**[FLOW-06 / 9-B단계 → 12단계 — OS handler의 적용 호출과 반환]** — [`src/components/DemoShell.tsx:309-334`](../src/components/DemoShell.tsx#L309-L334)
 
 ```tsx
 export function DemoShell() {
@@ -3079,7 +3094,7 @@ export function DemoShell() {
 
 ↓ **일반 WebView B 경로에서는 classifier의 `deep-link` decision이 `handleNavigationRequest`로 돌아온다. 이 consumer는 이미 검증된 `decision.value`를 `applyDeepLink`에 직접 넘겨 OS 경로와 두 번째로 합류하고, false를 native WebView까지 반환해 custom scheme 자체의 web load를 막는다.**
 
-**[FLOW-06 / 13-B단계 — WebView의 공통 적용 합류]** — [`src/components/DemoShell.tsx:382-387`](../src/components/DemoShell.tsx#L382-L387)
+**[FLOW-06 / 13-B단계 — WebView의 공통 적용 합류]** — [`src/components/DemoShell.tsx:396-401`](../src/components/DemoShell.tsx#L396-L401)
 
 ```tsx
 export function DemoShell() {
@@ -3108,7 +3123,7 @@ export function DemoShell() {
 
 ↓ **두 입력이 공유하는 `applyDeepLink`는 검사된 `tabIndex=1`을 Zustand에 저장하고 하단 tab 표시 입력을 복구한다. `targetUrl`이 있고 Web target이므로 항상 mount되어 있던 두 번째 `WebTab` ref의 `loadUrl('https://m.nate.com/')`을 호출한다.**
 
-**[FLOW-06 / 10단계 → 11-A단계 — 두 번째 공통 합류]** — [`src/components/DemoShell.tsx:281-301`](../src/components/DemoShell.tsx#L281-L301)
+**[FLOW-06 / 10단계 → 11-A단계 — 두 번째 공통 합류]** — [`src/components/DemoShell.tsx:287-307`](../src/components/DemoShell.tsx#L287-L307)
 
 ```tsx
 export function DemoShell() {
@@ -3140,9 +3155,9 @@ export function DemoShell() {
 }
 ```
 
-↓ **`loadUrl` 호출은 선택 WebView에서 FLOW-03을 시작하지만 URL load 완료를 이 deep-link 함수가 await하지는 않는다. `applyDeepLink`가 동기로 돌아오면 `handleDeepLinkUrl`은 true를 반환하고, OS effect는 그 값을 사용하지 않은 채 바로 처리 완료 cleanup을 수행한다.**
+↓ **`loadUrl` 호출은 선택 WebView에서 FLOW-03을 시작하지만 URL load 완료를 이 deep-link 함수가 await하지는 않는다. `applyDeepLink`가 동기로 돌아오면 `handleDeepLinkUrl`은 true를 반환한다. OS effect는 그 값을 사용하지 않고 다음 UI frame을 예약하며, 그 callback이 current-route params 전체를 교체한다.**
 
-**[FLOW-06 / 13-A단계] 종료** — [`src/components/DemoShell.tsx:344-349`](../src/components/DemoShell.tsx#L344-L349)
+**[FLOW-06 / 13-A단계] 종료** — [`src/components/DemoShell.tsx:350-363`](../src/components/DemoShell.tsx#L350-L363)
 
 ```tsx
 export function DemoShell() {
@@ -3152,17 +3167,25 @@ export function DemoShell() {
     // ... incomingUrl 선택과 빈 query 조기 반환 생략 ...
 
     handleDeepLinkUrl(incomingUrl);
-    // 같은 query가 다음 화면 그리기 때 또 실행되지 않도록 처리한 직후 route param을 지웁니다.
-    // [FLOW-06 / 13-A단계] 종료(OS): 적용 시도 직후 query를 지워 다음 render에서 같은 OS 입력이 반복되지 않게 합니다.
-    router.setParams({ demoDeepLink: undefined });
-    // [문법] dependency 배열의 함수, router, query 가운데 하나가 바뀔 때만 effect가 다시 확인합니다.
-  }, [demoDeepLink, handleDeepLinkUrl, router]);
+    // 같은 query가 현재 navigation state에 남지 않도록 다음 UI frame에 route params를 빈 객체로 완전히 교체합니다.
+    // [이유] Cold 첫 effect와 navigation state 초기화가 겹치면 즉시 보낸 param 교체가 반영되지 않으므로, mount commit 다음 frame까지 기다립니다.
+    const cleanupFrame = requestAnimationFrame(() => {
+      // [FLOW-06 / 13-A단계] 종료(OS): query를 제거해 현재 입력의 중복 적용을 막고, 같은 OS URL의 다음 Warm 입력은 새 변경으로 인식하게 합니다.
+      navigation.replaceParams({});
+    });
+
+    // [역할] effect가 다음 frame 전에 정리되면 예약한 navigation 변경이 사라진 화면에 실행되지 않게 취소합니다.
+    return () => {
+      cancelAnimationFrame(cleanupFrame);
+    };
+    // [문법] dependency 배열의 함수, navigation, query 가운데 하나가 바뀔 때만 effect가 다시 확인합니다.
+  }, [demoDeepLink, handleDeepLinkUrl, navigation]);
 
   // ... 나머지 handler와 JSX 생략 ...
 }
 ```
 
-↓ **종료:** route query는 `undefined`로 지워져 같은 OS event의 재실행을 막고, Zustand에는 선택 tab `1`이 남는다. 두 번째 `WebTab`은 기존 instance를 유지한 채 target URL navigation을 FLOW-03에서 계속 처리한다. 일반 WebView B 경로라면 같은 적용 결과 뒤 policy false가 원래 native WebView로 돌아가 custom-scheme load만 중단한다.
+↓ **종료:** 다음 UI frame에서 current index route의 params가 빈 객체로 교체되어 같은 OS event의 현재 render 반복을 막고, 같은 URL의 다음 Warm event는 새 query 변경이 된다. Zustand에는 선택 tab `1`이 남는다. Global navigation ref를 호출하지 않아 task 제거 Android Cold에서도 Root Router 오류를 만들지 않으며, frame 전에 effect가 정리되면 예약 callback도 취소된다. 두 번째 `WebTab`은 기존 instance를 유지한 채 target URL navigation을 FLOW-03에서 계속 처리한다. 일반 WebView B 경로라면 같은 적용 결과 뒤 policy false가 원래 native WebView로 돌아가 custom-scheme load만 중단한다.
 
 ### FLOW-07: Native 사용자 API, schema와 cache/refetch
 
@@ -3227,7 +3250,7 @@ export const NativeUsersScreen = forwardRef<
 
 ↓ **사용자가 Native tab을 선택해 Zustand의 `selectedTabIndex`가 `3`이 되면 `DemoShell`이 다시 render된다. React는 component를 새로 mount하지 않고 항상 있던 `NativeUsersScreen`에 `active=true`를 새 prop snapshot으로 전달한다.**
 
-**[FLOW-07 / 1단계]** — [`src/components/DemoShell.tsx:719-728`](../src/components/DemoShell.tsx#L719-L728)
+**[FLOW-07 / 1단계]** — [`src/components/DemoShell.tsx:733-742`](../src/components/DemoShell.tsx#L733-L742)
 
 ```tsx
 export function DemoShell() {
@@ -3701,7 +3724,7 @@ export const WebTab = forwardRef<WebTabHandle, WebTabProps>(function WebTab(
 
 ↓ **`DemoShell`이 각 WebTab을 만들 때 닫아 둔 prop closure가 `direction === "up"`을 계산한다. `"down"`은 false가 되어 `setScrollBottomBarVisible(false)` state update를 요청한다.**
 
-**[FLOW-08 / 4-A단계]** — [`src/components/DemoShell.tsx:704-708`](../src/components/DemoShell.tsx#L704-L708)
+**[FLOW-08 / 4-A단계]** — [`src/components/DemoShell.tsx:718-722`](../src/components/DemoShell.tsx#L718-L722)
 
 ```tsx
 export function DemoShell() {
@@ -3732,7 +3755,7 @@ export function DemoShell() {
 
 ↓ **React가 scroll state update로 `DemoShell`을 다시 render한다. bridge state는 true, scroll state는 false, keyboard state는 false이므로 세 실제 입력의 `true && false && !false`가 최종 `bottomBarVisible=false`가 된다. popup은 별도 네 번째 AND 항이 아니라 open/close 때 scroll state를 false/true로 바꾸는 caller다.**
 
-**[FLOW-08 / 5단계]** — [`src/components/DemoShell.tsx:160-182`](../src/components/DemoShell.tsx#L160-L182)
+**[FLOW-08 / 5단계]** — [`src/components/DemoShell.tsx:166-188`](../src/components/DemoShell.tsx#L166-L188)
 
 ```tsx
 export function DemoShell() {
@@ -3768,7 +3791,7 @@ export function DemoShell() {
 
 ↓ **이 render가 commit된 뒤 React가 `bottomBarVisible` dependency의 effect를 자동 실행한다. false는 `toValue=bottomBarHiddenOffset`으로 바뀌고, 같은 `Animated.Value`를 180ms 동안 native driver에서 아래로 이동시킨다.**
 
-**[FLOW-08 / 6단계]** — [`src/components/DemoShell.tsx:196-211`](../src/components/DemoShell.tsx#L196-L211)
+**[FLOW-08 / 6단계]** — [`src/components/DemoShell.tsx:202-217`](../src/components/DemoShell.tsx#L202-L217)
 
 ```tsx
 export function DemoShell() {
@@ -3797,7 +3820,7 @@ export function DemoShell() {
 
 ↓ **같은 false는 animation과 별도로 render된 wrapper의 `pointerEvents="none"`을 즉시 선택한다. 따라서 막대가 내려가는 도중에도 보이지 않는 tab이 touch를 받지 않으며, `translateY`는 effect가 갱신하는 같은 `bottomBarTranslateY`를 읽는다.**
 
-**[FLOW-08 / 7단계]** — [`src/components/DemoShell.tsx:732-748`](../src/components/DemoShell.tsx#L732-L748)
+**[FLOW-08 / 7단계]** — [`src/components/DemoShell.tsx:746-762`](../src/components/DemoShell.tsx#L746-L762)
 
 ```tsx
 export function DemoShell() {
@@ -3861,7 +3884,7 @@ export function BottomTabBar({
 
 ↓ **`bottomBarHiddenOffset`은 막대에만 쓰이지 않고 항상 mount된 WebTab 세 개와 Native screen의 `bottomContentInset` prop으로도 전달된다. bar가 숨거나 다시 나타나도 각 child의 loading·error·list content는 동일한 safe-area 포함 높이를 아래 여백 계약으로 유지한다.**
 
-**[FLOW-08 / 9단계] 종료** — [`src/components/DemoShell.tsx:681-747`](../src/components/DemoShell.tsx#L681-L747)
+**[FLOW-08 / 9단계] 종료** — [`src/components/DemoShell.tsx:695-761`](../src/components/DemoShell.tsx#L695-L761)
 
 ```tsx
 export function DemoShell() {
@@ -3964,7 +3987,7 @@ export function DemoShell() {
 
 ↓ **`DemoShell` render가 Expo Network Hook을 호출하면 library가 OS 연결 상태 구독을 만들고 현재 snapshot을 반환한다. 이후 OS snapshot이 바뀌면 Hook이 subscriber update를 보내 같은 component를 자동으로 다시 render한다.**
 
-**[FLOW-09 / 1단계 → 2단계]** — [`src/components/DemoShell.tsx:115-119`](../src/components/DemoShell.tsx#L115-L119)
+**[FLOW-09 / 1단계 → 2단계]** — [`src/components/DemoShell.tsx:121-125`](../src/components/DemoShell.tsx#L121-L125)
 
 ```tsx
 export function DemoShell() {
@@ -3982,7 +4005,7 @@ export function DemoShell() {
 
 ↓ **선택한 offline snapshot의 `type`이 명확히 `NetworkStateType.NONE`이므로 render 중 파생값 `networkOffline=true`가 된다. 초기 `UNKNOWN`은 offline으로 단정하지 않으며 false다.**
 
-**[FLOW-09 / 3단계]** — [`src/components/DemoShell.tsx:183-186`](../src/components/DemoShell.tsx#L183-L186)
+**[FLOW-09 / 3단계]** — [`src/components/DemoShell.tsx:189-192`](../src/components/DemoShell.tsx#L189-L192)
 
 ```tsx
 export function DemoShell() {
@@ -3999,7 +4022,7 @@ export function DemoShell() {
 
 ↓ **React는 이 boolean을 root `NetworkStatusBanner.visible`과 popup의 `networkOffline` prop에 전달한다. 이 prop 전달은 WebTab의 `loadError`나 Query cache를 쓰거나 지우지 않는다.**
 
-**[FLOW-09 / 4단계]** — [`src/components/DemoShell.tsx:626-631`](../src/components/DemoShell.tsx#L626-L631), [`src/components/DemoShell.tsx:758-760`](../src/components/DemoShell.tsx#L758-L760)
+**[FLOW-09 / 4단계]** — [`src/components/DemoShell.tsx:640-645`](../src/components/DemoShell.tsx#L640-L645), [`src/components/DemoShell.tsx:772-774`](../src/components/DemoShell.tsx#L772-L774)
 
 ```tsx
 export function DemoShell() {
@@ -4274,7 +4297,7 @@ export const WebTab = forwardRef<WebTabHandle, WebTabProps>(function WebTab(
 
 ↓ **native success 뒤 WebTab은 `loadError=null`인 document 화면과 완료 progress를 유지한다. `DemoShell`의 network boolean, 각 WebView/popup local state, TanStack Query cache는 서로를 덮어쓰지 않은 채 각 최신 event 결과로 남는다.**
 
-**[FLOW-09 / 10단계] 종료** — [`src/components/DemoShell.tsx:626-631`](../src/components/DemoShell.tsx#L626-L631), [`src/components/DemoShell.tsx:758-775`](../src/components/DemoShell.tsx#L758-L775)
+**[FLOW-09 / 10단계] 종료** — [`src/components/DemoShell.tsx:640-645`](../src/components/DemoShell.tsx#L640-L645), [`src/components/DemoShell.tsx:772-789`](../src/components/DemoShell.tsx#L772-L789)
 
 ```tsx
 export function DemoShell() {
@@ -4360,7 +4383,7 @@ export function DemoShell() {
 
 ## 4. Test를 읽을 때의 경계
 
-15개 test 파일은 모두 첫 두 줄에 `[파일 역할]`과 `[검증 경계]`가 있고, helper·mock factory·`describe`·`it`·`act`·`waitFor` callback에는 `[역할]`이 있다. fixture·mock·event·matcher의 낯선 문법과 library 동작에는 `[문법]`·`[라이브러리]` 설명이 이어진다. test를 읽을 때 다음 순서를 사용한다.
+16개 test 파일은 모두 첫 두 줄에 `[파일 역할]`과 `[검증 경계]`가 있고, helper·mock factory·`describe`·`it`·`act`·`waitFor` callback에는 `[역할]`이 있다. fixture·mock·event·matcher의 낯선 문법과 library 동작에는 `[문법]`·`[라이브러리]` 설명이 이어진다. test를 읽을 때 다음 순서를 사용한다.
 
 1. 무엇을 실제 production 함수로 import하는지 본다.
 2. `jest.mock`이 어느 계층을 교체하는지 본다.

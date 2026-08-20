@@ -222,3 +222,47 @@ source/test는 `073c2cad87ccd2b8dc6d91dd604fa631b4829fff`로 문서와 분리했
 - Source/test commit은 `bf591b254c1369879adc094fd0d789f3f87a8ee3`이며, 지정 LG `LM-V500N`, Android 12에서 검증했다. 실기기 serial, log, screenshot과 generated output은 repository에 기록하지 않았다.
 
 현재 자동 검사는 Jest 15 suites·54 tests, typecheck와 lint를 통과했다. Expo dependency 검사는 `expo`, `expo-constants`, `jest-expo`의 SDK 54 patch 기대치와 설치 version 차이만 남아 있으며 이번 동작 수정과 분리한다. 상세 source 계약과 최신 Git 판정은 [5단계 최종 인계](./2026-08-13-step-5-final-handoff.md)를 우선한다.
+
+### 8.6 2026-08-20 task 제거 cold deep-link readiness 후속 회귀
+
+8.5 뒤 사용자가 Metro가 실행 중인데도 Android 최근 앱 task에서 앱을 제거한 다음 외부 custom scheme으로 cold start하면 하얀 화면이 되는 현상을 발견했다. 이는 7.3의 **Metro 부재 → bundle load 실패 → Window 소실** 경로와 다르다. 이번에는 bundle이 정상 완료되고 `MainActivity`와 process가 살아 있었지만 Metro에 다음 JavaScript 예외가 기록됐다.
+
+```text
+Attempted to navigate before mounting the Root Layout component.
+```
+
+3단계 hydration 수정으로 Root `Stack`은 먼저 mount되고 있었다. 다만 child `DemoShell`의 첫 effect가 global Expo Router navigation ref의 `onReady`보다 먼저 `useRouter().setParams`를 호출할 수 있었다. 처리 완료 query cleanup을 이미 mount된 index route의 `useNavigation().setParams`로 바꿔 global ref readiness 가정을 제거했다. URL rewrite, parser, target 적용, invalid Alert, package·scheme·manifest와 launcher-free APK는 변경하지 않았다.
+
+- Source/test commit: `1546128c63198af1d3540de595130620e586ef4b`
+- 자동 검사: Jest 16 suites·55 tests, typecheck·lint 통과
+- Expo 검사: 기존 SDK 54 patch mismatch 3개만 유지, Doctor 17/18
+- 지정 기기: LG `LM-V500N`, Android 12, 기존 development build와 계속 실행 중인 Metro
+- 정확한 task 제거 뒤 동일 valid cold link 3회: 모두 `LaunchState: COLD`, Naver tab과 app navigation 표시, 대표 실행의 `https://m.nate.com/` 확인
+- 회귀: 일반 launcher cold, warm native target, invalid target와 기존 tab 유지, 동일 valid link 재호출, warm Naver→Nate→hardware Back→Naver 통과
+
+사용자가 source 수정 전 iOS cold link가 정상임을 확인했지만 이번 Android 후속에서 새 iOS build·실기기 검증은 수행하지 않았다. 현재 source 계약과 문서·Git closeout은 [5단계 최종 인계](./2026-08-13-step-5-final-handoff.md)의 최신 절을 우선한다.
+
+### 8.7 2026-08-20 동일 Web URL Warm 재입력 후속 수정
+
+8.6 결과를 사용자가 직접 다시 검증한 뒤, **task 제거 Cold Web link는 정상인데 앱을 background에 둔 Warm 상태에서 같은 브라우저 Web link를 다시 누르면 Naver tab 선택과 Nate URL load만 생략되는 현상**을 발견했다. 같은 Warm 상태의 native target과 invalid target은 정상이라 Android custom-scheme resolver 전체가 멈춘 경우와 구분됐다. 이 절은 8.6의 “동일 valid link 재호출까지 최종 통과” 판정을 다음의 더 정확한 순서와 결과로 대체한다.
+
+실제 브라우저와 동일한 순서로 `task 제거 → Web link Cold → Main tab 선택 → Chrome의 같은 Web link Warm`을 실행해 재현했다. App process는 유지됐고 Warm `VIEW` intent는 `redirectSystemPath({ initial: false })`까지 다시 도달했지만 `DemoShell` query effect는 재실행되지 않았다. 반면 다른 native query가 들어오면 effect가 실행된 뒤 query가 `undefined`로 정리됐다. 따라서 WebView ref나 Android Intent 누락이 아니라, Cold 첫 effect의 즉시 param cleanup이 navigation state 초기화 중 반영되지 않아 같은 rewritten route가 새 변경으로 인식되지 않은 lifecycle race였다.
+
+최종 수정은 다음 경계만 바꿨다.
+
+- Global `useRouter`는 다시 사용하지 않고 mount된 index route의 `useNavigation` 객체를 유지한다.
+- `handleDeepLinkUrl`과 tab·WebView 적용은 즉시 실행하되, 처리 완료 query cleanup은 mount commit 다음 `requestAnimationFrame`으로 한 frame 미룬다.
+- Frame callback은 `setParams({ demoDeepLink: undefined })`의 얕은 병합 대신 `replaceParams({})`로 current-route params를 완전히 교체한다.
+- Effect가 frame 전에 정리되면 `cancelAnimationFrame`으로 예약 callback을 취소한다.
+- Android 전용 branch, retry state, dependency, package·manifest·native build input은 추가하지 않았다.
+
+Source/test commit은 `4f349b857f143a814e71f3154b54ed0023119648` (`Fix: Android 동일 Warm 딥링크 재처리`)이고, 직접 연결된 기존 source 설명 한 줄의 시점은 후속 `a8cd4fb` (`Docs: 딥링크 cleanup 주석 시점 정정`)에서 실행식 변경 없이 바로잡았다. 기존 FLOW 표식과 변경과 무관한 주석은 보존했으며 새 frame 예약·취소와 test 재현 코드에도 기존 수준의 역할·이유·검증 경계 주석을 추가했다.
+
+- 자동 검사: Jest 16 suites·56 tests, typecheck·lint 통과
+- Expo 검사: install check의 SDK 54 patch mismatch 3개, Doctor 17/18 유지; public config 통과
+- Cold: 최근 앱 card 제거로 process 종료를 확인한 뒤 Chrome Web link가 새 process를 만들고 Naver tab·`https://m.nate.com/`을 표시
+- 동일 Warm Web: Main tab으로 이동한 뒤 같은 Chrome link를 다시 눌러 같은 process에서 Naver tab·`https://m.nate.com/` 표시
+- Warm 회귀: native target의 `사용자 조회 완료` Alert와 invalid target의 `잘못된 링크` Alert 통과
+- Runtime 경계: 기존 launcher-free development build와 Metro의 최신 JavaScript bundle을 사용했으며 APK는 다시 만들지 않음
+
+공통 TypeScript cleanup이므로 iOS source에도 적용되지만, 사용자의 정상 확인은 이 최종 수정 전 iOS Cold 결과다. 이번 후속 뒤 새 EAS build·iPhone 실기기 검증은 수행하지 않았으므로 iOS runtime 통과로 확대하지 않는다. 최신 전체 판정은 [5단계 최종 인계](./2026-08-13-step-5-final-handoff.md)의 가장 뒤 절을 우선한다.

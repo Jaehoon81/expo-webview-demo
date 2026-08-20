@@ -90,6 +90,8 @@ LOCAL_DEMO_HTML
 
 Root `Stack`은 Zustand hydration과 관계없이 먼저 mount된다. 3단계 Android cold custom-scheme 검증에서 hydration loading이 Root layout 전체를 막으면 `router.setParams`가 navigation tree보다 먼저 호출되는 문제가 발견됐다. 현재는 loading gate가 index route 안에 있으므로 system path가 cold start로 들어와도 Root Stack이 먼저 존재한다.
 
+Root Stack 선행 mount는 필요하지만 global imperative navigation ref의 `isReady()`까지 같은 시점에 보장하지는 않는다. 2026-08-20 Android에서 최근 앱 task 제거 뒤 custom scheme으로 cold start했을 때, `DemoShell`의 첫 passive effect가 Expo Router `NavigationContainer.onReady`보다 먼저 global `useRouter().setParams`를 호출해 같은 오류와 하얀 화면을 다시 만들었다. Cleanup 대상을 mount된 index route의 `useNavigation()` 객체로 옮긴 뒤에는 Cold 화면이 복구됐지만, 첫 effect에서 즉시 보낸 param 변경이 navigation state 초기화 중 반영되지 않아 같은 Web URL의 다음 Warm intent가 route 변경을 만들지 못하는 후속 race가 확인됐다. 현재는 mount commit 다음 `requestAnimationFrame`에서 current-route `replaceParams({})`로 params를 완전히 교체하고 effect cleanup에서 예약 frame을 취소한다. Global ref, Android 전용 branch와 retry state는 사용하지 않는다.
+
 ### 3.2 Zustand persist와 index gate
 
 [`src/store/app-store.ts`](../src/store/app-store.ts)는 두 종류의 상태를 구분한다.
@@ -358,9 +360,11 @@ mywebviewapp://webviewappdemo?target=1&url=m.nate.com
   → DemoShell useLocalSearchParams
   → parseDemoDeepLink
   → applyDeepLink
+  → next UI frame requestAnimationFrame
+  → current index route navigation.replaceParams({})
 ```
 
-`applyDeepLink`는 tab을 먼저 선택하고, Web tab에 URL이 있으면 기존 instance의 `loadUrl`을 호출한다. 처리한 query는 `router.setParams({ demoDeepLink: undefined })`로 제거해 다음 render의 중복 적용을 막는다.
+`applyDeepLink`는 tab을 먼저 선택하고, Web tab에 URL이 있으면 기존 instance의 `loadUrl`을 호출한다. 처리한 query는 다음 UI frame에 `useNavigation()`이 반환한 현재 index route의 `replaceParams({})`로 완전히 제거한다. 이 한 frame 지연은 Cold 첫 route commit 뒤 cleanup을 보장해 같은 OS URL이 Warm 상태에서 다시 들어왔을 때 새 query 변경으로 인식되게 한다. Effect가 frame 전에 정리되면 `cancelAnimationFrame`으로 예약을 취소한다. Global `useRouter().setParams`는 cold mount에서 navigation ref 준비를 가정하므로 이 cleanup에 사용하지 않는다.
 
 OS 입력은 FLOW-06 `1-A`~`6-A`, 일반 WebView 입력은 `1-B`~`3-B`, popup 입력은 `1-C`·`3-C`를 거친 뒤 공통 `7`단계 handler와 `8`단계 parser에 합류한다. invalid 입력은 `9-A`에서 state 변경 없이 끝나고, valid 입력은 `9-B`→`10`→Web `11-A` 또는 native `11-B`로 갈라진 뒤 `12`에서 boolean을 caller에 반환하고 `13-A`~`13-C`에서 종료한다. app이 처리하지 않는 외부 scheme만 `2-D`→`3-D Linking.openURL`→`4-D`에서 별도로 종료한다.
 
@@ -451,6 +455,7 @@ bridgeBottomBarVisible && scrollBottomBarVisible && !keyboardVisible
 | WebView error scroll | 일반 scroll 경로 유지 | 성공 load 전 합성 scroll 차단 |
 | pull refresh Alert | 결과 직후 | drag 종료 뒤 지연 |
 | notification channel | `webview-demo` 필요 | channel 없음 |
+| OS deep-link Cold cleanup·동일 Warm 재입력 | 다음 UI frame의 current-route `useNavigation().replaceParams({})`; task 제거 Cold와 동일 Web URL Warm 재호출 통과 | 같은 공통 TypeScript 경로 사용; 수정 전 사용자 Cold 확인은 정상, 수정 뒤 새 build·실기기 검증은 미수행 |
 
 공통 TypeScript source라도 native WebView, keyboard, notification, safe area와 gesture timing은 platform runtime에 의존한다. 조건문 test는 JS branch를 확인할 뿐 실제 native event timing을 증명하지 않는다.
 
@@ -485,8 +490,9 @@ package, plugin, app identity, native config를 바꾸면 기존 설치 binary�
 
 ## 16. 자동 test가 고정한 계약
 
-현재 15개 suite·54개 test는 다음 좁은 계약을 고정한다.
+현재 16개 suite·55개 test는 다음 좁은 계약을 고정한다.
 
+- DemoShell의 OS deep-link 적용과 current-route query cleanup 선택
 - bridge action dispatch와 error envelope
 - URL/deep-link parsing과 system path rewrite
 - user schema와 retry policy
@@ -515,7 +521,7 @@ Jest의 SecureStore·Query Hook·WebView·Alert·bridge dependency mock은 실�
 | tab index/tag/order | tabs constant, navigation type, bridge schema, deep link, refs, tests | typecheck + 관련 tests + tab/runtime 표적 확인 |
 | WebView mount/history | DemoShell mapping, WebTab key/ref, popup, Android/iOS navigation | WebTab tests + 양 platform history 표적 확인 |
 | bridge action | local HTML, types, schema, dispatcher, DemoShell dependency, callback | dispatcher/local HTML tests + 해당 기기 기능 |
-| custom scheme | app config, native intent, URL parser, DemoShell params | parsing tests + 새 binary 여부 + cold/warm 실기기 |
+| custom scheme | app config, native intent, URL parser, DemoShell params/current-route navigation | parsing·DemoShell tests + 새 binary 여부 + cold/warm 실기기 |
 | 사진/알림 | app plugin, service, dispatcher, permissions | pure tests + build 필요 여부 + 권한 실기기 |
 | user API/cache | type, schema, Axios, Query client, screen | schema/retry/screen tests + 실제 network 표적 확인 |
 | persist state | Zustand type, partialize/merge, hydration gate | store/index tests + app restart 확인 |

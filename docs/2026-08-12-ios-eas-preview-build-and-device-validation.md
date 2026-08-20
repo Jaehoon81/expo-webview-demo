@@ -265,3 +265,26 @@ source/test/config는 다음 의미 단위로 분리했다.
 - Source/test commit `bf591b254c1369879adc094fd0d789f3f87a8ee3`은 Android 지정 실기기에서 검증했고, Jest 15 suites·54 tests, typecheck와 lint를 통과했다.
 
 이번 후속 범위에서는 새 iOS build·설치·iPhone 재검증을 수행하지 않았다. 따라서 “Android 수정이 iOS에도 실기기에서 다시 통과했다”는 증거로 확대하지 않고, platform guard와 자동 test로 iOS 실행식이 유지됐음을 확인한 정적·component-test 증거로 구분한다. 기존 iPhone 실기기 결과는 이 문서의 당시 build 증거로 유효하며, 현재 Android source 계약과 Git closeout은 [5단계 최종 인계](./2026-08-13-step-5-final-handoff.md)의 최신 후속 절을 우선한다.
+
+## 15. 2026-08-20 Android cold deep-link cleanup 수정과 iOS 경계
+
+사용자는 Android task 제거 cold link의 하얀 화면을 조사하기 직전에 iOS에서 외부 custom-scheme cold start가 정상임을 직접 확인했다. Android에서는 global `useRouter().setParams`가 Expo Router navigation ref 준비보다 먼저 실행됐고, 공통 `DemoShell` query cleanup을 mount된 현재 index route의 `useNavigation().setParams`로 바꿨다.
+
+- `Platform.OS` 분기, iOS WebView `location.assign`, header back/forward, scheme·bundle identifier와 EAS config에는 변경이 없다.
+- Current-route `setParams`는 Android/iOS 모두 같은 index route의 처리 완료 query만 `undefined`로 갱신한다. URL rewrite·parser·tab 적용과 동일 link 재처리 계약은 유지된다.
+- 새 `DemoShell.test.tsx`는 current-route navigation을 사용하고 global Router를 사용하지 않는 실행 경계를 mock으로 확인한다.
+- Source/test commit `1546128c63198af1d3540de595130620e586ef4b`은 Jest 16 suites·55 tests, typecheck와 lint를 통과했다.
+
+사용자의 iOS 확인은 **수정 전** runtime 결과이며, 수정 뒤 EAS build·설치·iPhone 재검증은 수행하지 않았다. 따라서 현재 iOS source는 공통 실행식·typecheck·component test 기준으로만 회귀가 없다고 판정하고 새 iOS 실기기 통과로 기록하지 않는다. 최신 Android 실기기와 Git closeout은 [5단계 최종 인계](./2026-08-13-step-5-final-handoff.md)를 우선한다.
+
+## 16. 2026-08-20 동일 Warm deep-link cleanup 후속과 iOS 경계
+
+15절의 current-route `setParams` 수정 뒤 Android에서 정확한 Cold Web link와 같은 URL의 Warm 재입력이 route 변경으로 인식되지 않는 후속 race가 확인됐다. Cold 첫 effect가 navigation state 초기화와 겹칠 때 즉시 보낸 cleanup이 반영되지 않았기 때문이다. 최종 공통 TypeScript 경로는 mount commit 다음 UI frame에 current-route `replaceParams({})`를 실행하고, effect cleanup에서 예약 frame을 취소한다.
+
+- URL rewrite·parser·tab 적용, iOS WebView `location.assign`, header back/forward, gesture와 EAS/native config는 변경하지 않았다.
+- `requestAnimationFrame`은 platform별 시간값이나 retry loop가 아니라 첫 route commit 다음 frame 하나만 기다린다.
+- `replaceParams({})`는 처리 완료 route params를 완전히 비워 같은 Web URL의 다음 Warm 입력이 새 query 변경이 되게 한다.
+- Source/test commit `4f349b857f143a814e71f3154b54ed0023119648`은 Jest 16 suites·56 tests, typecheck와 lint를 통과했다.
+- Android 지정 실기기에서는 task 제거 Cold, 같은 process의 동일 Web URL Warm 재입력, Warm Native refetch와 invalid Alert를 통과했다.
+
+이 실행식에는 `Platform.OS` 분기가 없으므로 iOS source도 같은 cleanup 순서를 사용한다. 다만 최종 수정 뒤 EAS build·설치·iPhone 검증은 수행하지 않았으므로, 이 절은 자동 검사와 source 계약만 기록한다. 수정 전 사용자의 iOS Cold 정상 결과와 과거 Preview Build 결과를 최종 수정 뒤의 새 실기기 증거로 바꾸지 않는다.

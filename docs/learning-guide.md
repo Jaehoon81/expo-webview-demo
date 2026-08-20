@@ -184,6 +184,8 @@ Root Stack mount
     → hydration loading 또는 DemoShell
 ```
 
+이 순서는 navigation tree가 존재한다는 뜻이지 Expo Router의 global navigation ref가 이미 `isReady()`라는 뜻은 아니다. 2026-08-20 Android task 제거 cold start에서는 child인 `DemoShell`의 첫 effect가 `NavigationContainer.onReady`보다 먼저 global `useRouter().setParams`를 실행해 같은 오류가 다시 드러났다. Cleanup 대상을 **현재 index route navigation 객체**로 바꾸면 global ref 오류는 없어지지만, Cold 첫 effect 안에서 즉시 param을 바꾸면 route state 초기화와 겹쳐 변경이 반영되지 않을 수 있다. 현재는 route context를 그대로 사용하면서 mount commit 다음 `requestAnimationFrame` 한 번만 기다려 `replaceParams({})`를 실행한다. 이는 임의 시간의 retry timer가 아니라 navigation mount 경계 다음 UI frame이며, effect가 먼저 정리되면 예약도 취소한다.
+
 #### Source 대조
 
 1. [`app/_layout.tsx`](../app/_layout.tsx)의 `[FLOW-01]`, `[FLOW-01 / 1-B단계]`
@@ -191,8 +193,9 @@ Root Stack mount
 3. [`app/index.tsx`](../app/index.tsx)의 `2-B`, `3-B`, `6`, `7`단계
 4. [`src/components/DemoShell.tsx`](../src/components/DemoShell.tsx)의 `8`, `9`단계
 5. [`src/components/IndexScreen.test.tsx`](../src/components/IndexScreen.test.tsx)의 DemoShell mock
+6. [`src/components/DemoShell.test.tsx`](../src/components/DemoShell.test.tsx)의 current-route/global Router 구분 mock
 
-Index screen test는 loading 전후 UI 순서를 확인하지만 Root navigation과 actual custom scheme을 실행하지는 않는다. 이 제한은 test의 `[검증 경계]`에서 바로 확인한다.
+Index screen test는 loading 전후 UI 순서를 확인하지만 Root navigation과 actual custom scheme을 실행하지는 않는다. DemoShell test도 current-route navigation 선택, 다음 UI frame cleanup과 동일 query의 재입력을 mock으로 고정할 뿐 native cold/warm timing을 실행하지 않는다. 이 제한은 각 test의 `[검증 경계]`에서 바로 확인한다.
 
 ### 2-2. SecureStore hydration의 성공·손상·실패
 
@@ -651,6 +654,27 @@ type DemoDeepLink = {
 
 `DemoShell.applyDeepLink`는 tab을 선택하고 Web tab URL 또는 native refetch를 적용한다. route query는 처리 뒤 제거해 같은 입력이 render마다 반복되지 않게 한다.
 
+Cleanup에는 Expo Router의 global `useRouter`가 아니라 현재 mount된 route의 React Navigation 객체를 돌려주는 `useNavigation`을 사용한다.
+
+```tsx
+const navigation = useNavigation<{
+  replaceParams(params: {
+    demoDeepLink?: string | string[];
+  }): void;
+}>();
+
+// ... deep link 적용 생략 ...
+const cleanupFrame = requestAnimationFrame(() => {
+  navigation.replaceParams({});
+});
+
+return () => {
+  cancelAnimationFrame(cleanupFrame);
+};
+```
+
+Android task 제거 cold start에서 global Router는 `NavigationContainer.onReady` 전이라 예외를 던질 수 있다. 현재 index route 객체는 component mount 시점에 존재하지만 Cold 첫 effect의 즉시 dispatch까지 navigation state에 반영된다는 뜻은 아니다. 그래서 다음 UI frame에 `replaceParams({})`로 params를 얕게 병합하지 않고 완전히 비운다. 같은 Web URL이 다시 들어와도 `undefined → 문자열`의 새 query 변경이 생기며, platform 분기 없이 Android와 iOS가 같은 공통 실행식을 계속 사용한다.
+
 FLOW-06의 입력 branch는 서로 다른 곳에서 시작하지만 `7`단계 공통 handler와 `8`단계 parser에서 합류한다.
 
 ```text
@@ -686,6 +710,7 @@ popup: 1-C → 3-C
 - [`src/services/native-intent.ts`](../src/services/native-intent.ts)
 - [`src/services/url-router.ts`](../src/services/url-router.ts)
 - [`src/components/DemoShell.tsx`](../src/components/DemoShell.tsx) params/apply/openExternal
+- [`src/components/DemoShell.test.tsx`](../src/components/DemoShell.test.tsx) current-route query cleanup mock과 native timing 경계
 
 ## 7. 사용자 API와 TanStack Query
 

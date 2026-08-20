@@ -447,3 +447,80 @@ Source/test commit은 `bf591b254c1369879adc094fd0d789f3f87a8ee3`이다. Push 뒤
 - 학습 완료는 문서 갱신이나 test 통과로 추정하지 않는다. 사용자가 실제 source 확인과 질문을 마쳤다고 명시할 때만 `learning-guide.md`에 기록한다.
 
 최종 문서 commit과 push는 이 절에 자기 SHA를 넣지 않는다. `git log -1 --format=%H -- docs/2026-08-13-step-5-final-handoff.md`와 local·tracking·live remote·GitHub API 비교를 최신 Git 판정으로 사용한다.
+
+## 17. 2026-08-20 Android task 제거 cold deep-link 하얀 화면 수정
+
+16절 뒤 사용자는 Metro를 유지한 상태에서도 Android 최근 앱 task에서 앱을 완전히 제거한 다음 외부 custom scheme으로 cold start하면 하얀 화면만 표시되는 현상을 발견했다. Android live Activity·process·intent, Metro bundle과 Expo Router stack을 함께 대조해 native launch 실패가 아닌 JavaScript navigation readiness race로 확정했다.
+
+### 17.1 원인과 source 경계
+
+- `dumpsys activity exit-info`는 app process가 `reason=USER REQUESTED`, `description=remove task`로 종료됐음을 보여 줬고 새 intent는 `LaunchState: COLD`로 `MainActivity`에 들어왔다.
+- `redirectSystemPath`가 index query를 만든 뒤 `DemoShell`의 첫 effect가 deep link를 적용했다. 이어진 global `useRouter().setParams`가 아직 `isReady() === false`인 Expo Router navigation ref assertion을 만나 Root Layout 오류를 던졌다.
+- Root `Stack` 선행 mount와 global `NavigationContainer.onReady`는 같은 보장이 아니다. 처리 완료 query만 `useNavigation()`이 제공하는 현재 index route의 navigation 객체로 지워 timer·retry state·platform branch 없이 race를 제거했다.
+- URL rewrite·runtime parser·Zustand state, WebView URL/history, invalid Alert, query cleanup의 `undefined` payload와 package/native config는 바꾸지 않았다.
+- 기존 `DemoShell.tsx` comment 256개 중 255개는 원문 그대로 유지했다. API가 바뀐 역할 comment 1개만 정확한 Hook 이름으로 정정하고 이유·generic 문법 comment를 추가했다.
+
+Source/test commit은 `1546128c63198af1d3540de595130620e586ef4b` (`Fix: Android 콜드 딥링크 화면 복구`)이다.
+
+### 17.2 검증 결과와 증거 층
+
+| 증거 | 결과 |
+|---|---|
+| Unit/component | 새 DemoShell test 1개 포함 Jest 16 suites·55 tests 통과 |
+| 정적 검사 | typecheck, lint, `git diff --check` 통과; FLOW 시작 9개·단계 233개, 중복 0 |
+| Expo package 검사 | 기존 SDK 54 patch mismatch 3개로 install check 불통과, Doctor 17/18; public config 통과 |
+| 설치·실행 | 기존 launcher-free Android development build가 계속 실행 중인 Metro의 현재 bundle을 load |
+| 지정 실기기 | LG `LM-V500N`, Android 12에서 task 제거 cold link 3회와 관련 회귀 통과 |
+| iOS | 수정 전 사용자 cold link 정상; 수정 뒤 새 build·실기기 검증 미수행 |
+
+Android에서는 정확한 최근 앱 card 제거 뒤 동일 valid custom scheme을 3회 반복해 모두 cold launch·process 생존·Naver tab 선택과 app navigation 표시를 확인했다. 대표 실행은 WebView DevTools에서 `https://m.nate.com/`도 확인했고 Metro에는 기존 Root Layout 오류가 다시 나타나지 않았다. 일반 launcher cold, warm native target, invalid target와 기존 tab 유지, 동일 valid link 재호출을 통과했으며 warm Naver→Nate 뒤 hardware Back도 Naver로 돌아가 직전 history 수정이 유지됐다.
+
+### 17.3 전체 문서 재감사
+
+- 현재 계약을 설명하는 README·architecture·source commentary·learning guide·implementation plan과 이 최종 인계를 갱신한다.
+- Android development build 문서는 Metro-on readiness race를 기존 Metro-off ANR과 구분하는 후속 절을 append하고, iOS 문서는 사용자의 수정 전 정상 확인과 수정 뒤 미검증 경계를 append한다.
+- 2026-08-07 중단 handoff, 2026-08-10 Expo Go 완료·초기 GitHub handoff는 역사적 snapshot이며 이번 query cleanup과 직접 연결되지 않아 본문을 변경하지 않는다.
+- `AGENTS.md`는 `agents-md-improver` 진단안대로 current-route cleanup 금지/유지 계약, 16 suites·55 tests와 mock/native timing 경계를 반영한다.
+- Source commentary의 `DemoShell.tsx` line anchor는 Hook block의 실제 line 이동을 모두 반영하고 FLOW-06 발췌를 current-route `useNavigation` source와 일치시킨다.
+- Tracked Markdown 13개의 local link 378개, source line anchor 126개, heading anchor 2개와 code fence·heading depth·table·trailing whitespace는 오류 0이다. Source commentary도 발췌 제목 118개·연결 단계 표식 147개, 축약 외 source line 2,348개와 TypeScript/TSX code fence 123개를 실제 source와 대조해 표식·순서·parse diagnostic 오류 0을 확인했다.
+- 학습 완료는 이번 수정·검증만으로 추정하지 않는다.
+
+사용자의 최신 지시에 따라 source/test commit 뒤의 추가 commit과 모든 push는 보류한다. 이 문서 묶음은 working tree에 미커밋으로 보존하며, 이후 사용자가 다시 승인할 때만 staged diff를 검사하고 원격 반영을 시작한다. Metro와 `tcp:8081` reverse는 요청대로 종료하지 않는다.
+
+## 18. 2026-08-20 Android 동일 Web 딥링크 Warm 재처리 최종 후속
+
+17절 뒤 사용자가 직접 다시 검증해, task 제거 Cold는 정상이지만 app task가 background에 남은 상태에서 브라우저의 같은 Web link를 재호출하면 Naver tab 이동과 Nate URL load만 생략되는 결함을 발견했다. Warm native target·refetch와 invalid target은 정상 동작했다. 이 절은 17절의 동일 valid link 재호출 최종 판정을 정확한 Cold→same Warm browser 순서로 대체한다.
+
+### 18.1 원인과 source 계약
+
+- 실제 Chrome link로 `task 제거 → Web Cold → Main tab → 같은 Web Warm`을 재현했고, Warm에서 process는 유지됐지만 tab·URL 적용이 없었다.
+- 동일 Warm `VIEW` intent는 Expo Router의 `redirectSystemPath(initial: false)`까지 도달했다. 다만 Cold 첫 `DemoShell` effect에서 즉시 보낸 current-route cleanup이 navigation state 초기화 중 반영되지 않아 같은 rewritten route가 새 query 변경을 만들지 못했다.
+- 다른 Warm query는 effect 실행 뒤 `undefined` cleanup까지 통과했으므로 WebView ref, parser, Android Intent와 Metro 문제가 아님을 분리했다.
+- 최종 source는 `handleDeepLinkUrl`을 즉시 실행한 뒤 `requestAnimationFrame`으로 다음 UI frame을 예약한다. Callback은 current-route `replaceParams({})`로 params를 완전히 비우고 effect cleanup은 `cancelAnimationFrame`으로 미실행 callback을 취소한다.
+- Global `useRouter`, Android branch, retry state, 별도 Linking listener, event nonce, dependency·package·native config는 추가하지 않았다.
+- 변경과 직접 연결된 기존 주석만 API·시점에 맞춰 정정하고, 그 외 주석과 FLOW 표식을 보존했다. 새 실행식과 test 코드에도 기존 수준의 역할·이유·검증 경계 주석을 추가했다.
+
+Behavior source/test commit은 `4f349b857f143a814e71f3154b54ed0023119648` (`Fix: Android 동일 Warm 딥링크 재처리`)이며, source 설명 한 줄의 최종 시점 정정은 `a8cd4fb` (`Docs: 딥링크 cleanup 주석 시점 정정`)이다.
+
+### 18.2 최종 증거
+
+| 증거 | 결과 |
+|---|---|
+| Unit/component | DemoShell 동일 Warm query test 포함 Jest 16 suites·56 tests 통과 |
+| 정적 검사 | typecheck, lint, source/test staged diff check 통과 |
+| Expo package 검사 | 기존 SDK 54 patch mismatch 3개로 install check 불통과, Doctor 17/18; public config 통과 |
+| 설치·실행 | 기존 launcher-free Android development build가 Metro의 최신 JavaScript bundle을 load |
+| 지정 Android 실기기 | task 제거 Cold Web, 같은 process의 Main→동일 Warm Web, Warm Native refetch·invalid Alert 통과 |
+| iOS | 최종 수정 전 사용자 Cold 정상; 최종 수정 뒤 새 build·실기기 검증 미수행 |
+
+Android Cold에서는 새 process, Naver tab 선택과 WebView DevTools의 `https://m.nate.com/`을 확인했다. 이어 Main tab을 선택한 뒤 같은 Chrome link를 다시 눌러 process가 유지된 Warm 상태에서 Naver tab과 Nate URL이 다시 적용됐다. 같은 process의 native target은 `사용자 조회 완료`, invalid target은 `잘못된 링크` Alert를 표시했다. 임시 진단 log는 모두 제거했고 Metro는 사용자 요청대로 종료하지 않았다.
+
+### 18.3 문서·Git closeout
+
+- 현재 계약 문서인 README·architecture·source commentary·learning guide·`AGENTS.md`와 계획·Android/iOS 완료 문서를 최종 cleanup 순서로 동기화한다.
+- 17절까지의 Cold 원인·검증·보류 기록은 당시 이력으로 보존하고, 현재 동작은 이 18절을 우선한다.
+- `DemoShell.tsx` line 증가 뒤 FLOW-01~09의 source commentary link와 FLOW-06 발췌 원문을 다시 대조한다.
+- Production FLOW 시작 9개·단계 233개는 중복 0이다. Source commentary의 발췌 제목 118개·연결 단계 표식 147개, 축약 외 source line 2,362개와 TypeScript/TSX code fence 123개는 실제 source 범위·표식·원문 순서·parse diagnostic 오류 0이다.
+- Tracked Markdown 13개의 local link 379개, source line anchor 126개·heading anchor 2개와 code fence·heading depth·trailing whitespace는 오류 0이다.
+- 최종 문서 commit은 자기 SHA를 본문에 넣지 않는다. Push 뒤 local `HEAD`, tracking ref, ahead/behind, `git ls-remote`와 GitHub public/API state를 독립 비교한다.
+- Metro와 Android `tcp:8081` reverse는 사용자의 요청대로 유지한다.

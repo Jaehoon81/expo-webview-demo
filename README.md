@@ -37,6 +37,8 @@ iOS 전체 흐름은 EAS internal Preview Build를 iPhone 11에 설치해 검증
 
 2026-08-20에는 Android에서 app 명령으로 Naver tab에 Nate를 연 뒤 hardware Back이 app 종료 경로로 빠지던 차이를 수정했다. Custom-scheme link와 bridge button 모두 같은 native WebView history에 Nate를 추가하고 Back으로 Naver에 복귀하며, Back 뒤 같은 target 재호출과 현재 URL reload도 LG `LM-V500N` Android 12 실기기에서 통과했다. iOS의 기존 `location.assign` navigation은 변경하지 않았다.
 
+같은 날 Android에서 최근 앱 task를 제거한 뒤 외부 custom scheme으로 cold start하면 global `router.setParams`가 Expo Router navigation ref 준비보다 먼저 실행돼 하얀 화면이 되는 lifecycle race도 확인했다. 첫 수정으로 cleanup 대상을 mount된 index route navigation으로 옮긴 뒤 사용자가 정확한 **task 제거 Cold Web link → 메인 탭 → 같은 브라우저 Web link Warm 재호출**에서 두 번째 탭 이동·URL load가 생략되는 후속 race를 발견했다. 동일 Warm intent는 `redirectSystemPath(initial: false)`까지 도달했지만 Cold 첫 effect의 즉시 param 정리가 navigation state 초기화 중 반영되지 않아 같은 route가 다시 변경으로 인식되지 않았다. 최종 구현은 mount commit 다음 `requestAnimationFrame`에서 current-route `replaceParams({})`를 실행하고 effect cleanup에서 예약 frame을 취소한다. 지정 Android 기기에서 task 제거 Cold의 Naver tab·`https://m.nate.com/`, 같은 process의 Main→동일 Warm Web 재호출, Warm Native refetch와 invalid Alert, 기존 Android history/back을 모두 확인했다. 사용자가 수정 전 iOS cold link는 정상임을 확인했으며, 이번 공통 TypeScript 수정 뒤 새 iOS build·실기기 재검증은 수행하지 않았다.
+
 ## 설치와 실행
 
 ```powershell
@@ -59,7 +61,7 @@ npx expo config --type public
 npx expo-doctor
 ```
 
-2026-08-20 현재 결과는 15개 test suite·54개 test, typecheck와 lint 통과다. `npx expo install --check`와 Expo Doctor는 source 수정과 무관한 SDK 54 patch 권장 차이 3개(`expo` `54.0.36 → ~54.0.37`, `expo-constants` `18.0.13 → ~18.0.14`, `jest-expo` `54.0.17 → ~54.0.18`)만 보고한다. 이 dependency 갱신은 Android history 수정에 섞지 않았다.
+2026-08-20 현재 결과는 16개 test suite·56개 test, typecheck와 lint 통과다. `npx expo install --check`와 Expo Doctor는 source 수정과 무관한 SDK 54 patch 권장 차이 3개(`expo` `54.0.36 → ~54.0.37`, `expo-constants` `18.0.13 → ~18.0.14`, `jest-expo` `54.0.17 → ~54.0.18`)만 보고한다. 이 dependency 갱신은 Android history·cold/warm deep-link 수정에 섞지 않았다.
 
 ## 주요 경로
 
@@ -84,9 +86,10 @@ npx expo-doctor
 |---|---|
 | Android Expo Go 1~40단계 | 통과 |
 | Android 네트워크·reload 후속 A-1~C-5 | 통과 |
-| 자동 tests·typecheck·lint | 15 suites·54 tests, typecheck, lint 통과 |
+| 자동 tests·typecheck·lint | 16 suites·56 tests, typecheck, lint 통과 |
 | Expo dependency·Doctor | SDK 54 patch 권장 차이 3개 확인, 별도 갱신 대기 |
 | Android development build와 외부 custom scheme | 통과 |
+| Android task 제거 뒤 외부 custom-scheme Cold/Warm | task 제거 Cold와 같은 Web URL Warm 재호출, Native refetch·invalid 회귀 통과 |
 | iOS EAS Preview Build와 실기기 전체 흐름 | 통과 |
 | Android/iOS WebView 오프라인 오류 화면·retry 후속 회귀 | 통과 |
 | Android app-initiated WebView history·hardware Back 후속 회귀 | 통과 |

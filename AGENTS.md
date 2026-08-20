@@ -23,6 +23,7 @@ Expo는 계속 변경된다. source, package, app config 또는 build 설정을 
 
 - `app/_layout.tsx`의 Root `Stack`은 Zustand hydration gate보다 먼저 mount되어야 한다.
 - hydration loading은 `app/index.tsx`가 소유하며 완료 뒤에만 `DemoShell`을 mount한다.
+- OS deep-link query cleanup은 mount된 index route의 `useNavigation().replaceParams({})`를 첫 mount commit 다음 `requestAnimationFrame`에서 실행하고 effect cleanup에서 예약 frame을 취소한다. Android cold start에서 아직 준비되지 않은 global navigation ref를 요구하는 `useRouter().setParams(...)`나 첫 effect의 즉시 cleanup으로 되돌리지 않는다.
 - `DemoShell`은 orchestration layer다. URL parsing, bridge validation, 사진·알림·device ID와 API parsing을 다시 안으로 합치지 않는다.
 - 세 `WebTab`과 `NativeUsersScreen`은 tab 전환만으로 unmount하지 않는다. active prop으로 표시·입력만 전환해 WebView history와 child state를 유지한다.
 - 현재 Web tab 재선택만 `reloadInitial()`, 현재 native tab 재선택만 Query `refetch()`를 실행한다.
@@ -130,8 +131,9 @@ JSON config와 lockfile에는 설명 comment를 추가하지 않는다. 관련 �
 
 ## 7. Test와 검증 판정
 
-현재 test는 15 suites·54 tests다. 수치는 source 변경 후 실제 실행 결과로 다시 확인한다.
+현재 test는 16 suites·56 tests다. 수치는 source 변경 후 실제 실행 결과로 다시 확인한다.
 
+- `DemoShell` deep-link test는 current-route navigation 선택, 다음 UI frame의 query cleanup과 같은 Web URL의 Warm 재입력을 mock으로 확인하며 실제 cold/warm native timing은 실기기 증거와 구분한다.
 - WebView component test는 `react-native-webview` 대역의 props/callback/remount를 확인한다.
 - Native 사용자 화면 test는 Query Hook과 Alert 대역을 사용한다.
 - Bridge dispatcher test는 사진·알림·SecureStore·UI dependency를 mock한다.
