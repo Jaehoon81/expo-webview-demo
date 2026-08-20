@@ -109,13 +109,13 @@ export function DemoShell() {
   // [라이브러리] 이 Hook은 휴대폰 화면 아래의 안전 여백을 알려 줍니다. 값이 바뀌면 하단 탭 막대 높이와 각 화면의 아래 여백도 다시 계산합니다.
   // [역할] `useSafeAreaInsets`는 하단 탭 높이와 각 화면 아래 여백에 쓸 기기 안전 여백을 제공합니다.
   const insets = useSafeAreaInsets();
-  // Router는 한 번 처리한 deep link query를 현재 route에서 지울 때 사용합니다. 같은 값이 다시 실행되는 일을 막습니다.
-  // [역할] `useNavigation`은 처리한 deep link query를 지울 현재 route의 navigation 객체를 제공합니다.
-  // [이유] 이미 mount된 route 객체를 사용하면 Android cold start에서 전역 Router ref가 준비되기 전에도 query를 안전하게 지울 수 있습니다.
-  // [문법] generic은 이 화면이 수정하는 query field와 `setParams` 입력 모양만 TypeScript에 알려 줍니다.
-  const router = useNavigation<{
-    setParams(params: {
-      demoDeepLink: string | string[] | undefined;
+  // Router는 한 번 처리한 deep link query를 현재 route에서 완전히 지울 때 사용합니다. 그래야 같은 값이 Warm 실행 중 다시 들어와도 새 query 변경으로 처리됩니다.
+  // [역할] `useNavigation`은 처리한 deep link query를 교체할 현재 route의 navigation 객체를 제공합니다.
+  // [이유] 이미 mount된 route 객체를 사용하면 Android cold start에서 전역 Router ref가 준비되기 전에도 query를 안전하게 지우고, `setParams`의 얕은 병합에 이전 값을 남기지 않습니다.
+  // [문법] generic은 이 화면이 교체하는 query field와 `replaceParams` 입력 모양만 TypeScript에 알려 줍니다.
+  const navigation = useNavigation<{
+    replaceParams(params: {
+      demoDeepLink?: string | string[];
     }): void;
   }>();
   // [FLOW-09 / 1단계] `DemoShell` render가 `useNetworkState`를 호출하면 Expo가 연결 상태 구독을 만들고 현재 snapshot을 반환합니다.
@@ -348,11 +348,19 @@ export function DemoShell() {
     }
 
     handleDeepLinkUrl(incomingUrl);
-    // 같은 query가 다음 화면 그리기 때 또 실행되지 않도록 처리한 직후 route param을 지웁니다.
-    // [FLOW-06 / 13-A단계] 종료(OS): 적용 시도 직후 query를 지워 다음 render에서 같은 OS 입력이 반복되지 않게 합니다.
-    router.setParams({ demoDeepLink: undefined });
-    // [문법] dependency 배열의 함수, router, query 가운데 하나가 바뀔 때만 effect가 다시 확인합니다.
-  }, [demoDeepLink, handleDeepLinkUrl, router]);
+    // 같은 query가 현재 navigation state에 남지 않도록 다음 UI frame에 route params를 빈 객체로 완전히 교체합니다.
+    // [이유] Cold 첫 effect와 navigation state 초기화가 겹치면 즉시 보낸 param 교체가 반영되지 않으므로, mount commit 다음 frame까지 기다립니다.
+    const cleanupFrame = requestAnimationFrame(() => {
+      // [FLOW-06 / 13-A단계] 종료(OS): query를 제거해 현재 입력의 중복 적용을 막고, 같은 OS URL의 다음 Warm 입력은 새 변경으로 인식하게 합니다.
+      navigation.replaceParams({});
+    });
+
+    // [역할] effect가 다음 frame 전에 정리되면 예약한 navigation 변경이 사라진 화면에 실행되지 않게 취소합니다.
+    return () => {
+      cancelAnimationFrame(cleanupFrame);
+    };
+    // [문법] dependency 배열의 함수, navigation, query 가운데 하나가 바뀔 때만 effect가 다시 확인합니다.
+  }, [demoDeepLink, handleDeepLinkUrl, navigation]);
 
   // [라이브러리] 여러 URL 처리 함수가 같은 Expo Linking 함수를 쓰도록 `useCallback`으로 한 번 감쌉니다.
   // [역할] `openExternalUrl`은 앱 밖 URL을 OS에 보내고 실패하면 공통 외부 앱 Alert를 보여 줍니다.
