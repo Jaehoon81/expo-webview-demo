@@ -30,7 +30,7 @@ import { Ionicons } from "@expo/vector-icons";
 // [라이브러리] Expo Linking은 URL을 다른 앱으로 보냅니다. Network는 휴대폰 연결 상태를 알려 주고, Router는 route의 query 값을 읽고 지웁니다.
 import * as Linking from "expo-linking";
 import * as Network from "expo-network";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams, useNavigation } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { dispatchBridgeMessage } from "@/src/bridge/dispatcher";
@@ -110,8 +110,14 @@ export function DemoShell() {
   // [역할] `useSafeAreaInsets`는 하단 탭 높이와 각 화면 아래 여백에 쓸 기기 안전 여백을 제공합니다.
   const insets = useSafeAreaInsets();
   // Router는 한 번 처리한 deep link query를 현재 route에서 지울 때 사용합니다. 같은 값이 다시 실행되는 일을 막습니다.
-  // [역할] `useRouter`는 처리한 deep link query를 현재 route에서 지울 명령을 제공합니다.
-  const router = useRouter();
+  // [역할] `useNavigation`은 처리한 deep link query를 지울 현재 route의 navigation 객체를 제공합니다.
+  // [이유] 이미 mount된 route 객체를 사용하면 Android cold start에서 전역 Router ref가 준비되기 전에도 query를 안전하게 지울 수 있습니다.
+  // [문법] generic은 이 화면이 수정하는 query field와 `setParams` 입력 모양만 TypeScript에 알려 줍니다.
+  const router = useNavigation<{
+    setParams(params: {
+      demoDeepLink: string | string[] | undefined;
+    }): void;
+  }>();
   // [FLOW-09 / 1단계] `DemoShell` render가 `useNetworkState`를 호출하면 Expo가 연결 상태 구독을 만들고 현재 snapshot을 반환합니다.
   // [라이브러리] 화면이 사라지면 연결 감시는 library가 정리합니다. 이 값은 인터넷 연결 여부일 뿐, 각 웹·API 요청의 성공을 뜻하지 않습니다.
   // [역할] `useNetworkState`는 휴대폰의 현재 연결 종류를 계속 알려 줘 공통 offline 안내에 사용하게 합니다.
