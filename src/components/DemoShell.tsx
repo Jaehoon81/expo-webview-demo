@@ -333,7 +333,7 @@ export function DemoShell() {
     [applyDeepLink],
   );
 
-  // 앱을 처음 열었을 때와 이미 실행 중일 때 들어온 route query를 한 번 처리하는 effect입니다. 처리한 값은 바로 지웁니다.
+  // 앱을 처음 열었을 때와 이미 실행 중일 때 들어온 route query를 한 번 처리하는 effect입니다. 처리한 값은 다음 UI frame에 지웁니다.
   // [역할] 이 `useEffect` callback은 route query의 deep link를 한 번 적용하고 같은 값이 반복되지 않도록 지웁니다.
   useEffect(() => {
     // [FLOW-06 / 6-A단계] React commit 뒤 query dependency가 바뀌면 이 effect가 자동 실행되어 첫 문자열을 골라 공통 handler에 보냅니다.
