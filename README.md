@@ -18,7 +18,7 @@ Expo SDK 54와 React Native로 구현한 WebView 기능 학습·검증용 데모
 
 ## 기술 구성
 
-- Expo SDK `54.0.35`, React Native `0.81.5`, React `19.1.0`
+- Expo SDK package range `~54.0.35`·설치 `54.0.36`, React Native `0.81.5`, React `19.1.0`
 - Expo Router, React Native WebView
 - TanStack Query, Axios, Zod, Zustand
 - Expo Image Picker·Image Manipulator, Notifications, SecureStore, Network
@@ -34,6 +34,8 @@ Expo SDK 54와 React Native로 구현한 WebView 기능 학습·검증용 데모
 Android Expo Go 흐름과 외부 OS에서 `mywebviewapp://`을 직접 실행하는 development build 경로를 실제 기기에서 검증했다. 현재 launcher-free debug development build는 JavaScript bundle을 내장하지 않으므로 실행 중인 Metro가 필요하다.
 
 iOS 전체 흐름은 EAS internal Preview Build를 iPhone 11에 설치해 검증했다. 2026-08-13에는 이전 인수에서 누락된 실제 네트워크 단절도 Android와 iPhone에서 후속 검증해 WebView 오류·loading 정렬과 iOS 반복 retry 중 하단 탭 유지를 통과했다. EAS build·credential과 iPhone 검증 결과는 아래 iOS 완료 문서를 따른다.
+
+2026-08-20에는 Android에서 app 명령으로 Naver tab에 Nate를 연 뒤 hardware Back이 app 종료 경로로 빠지던 차이를 수정했다. Custom-scheme link와 bridge button 모두 같은 native WebView history에 Nate를 추가하고 Back으로 Naver에 복귀하며, Back 뒤 같은 target 재호출과 현재 URL reload도 LG `LM-V500N` Android 12 실기기에서 통과했다. iOS의 기존 `location.assign` navigation은 변경하지 않았다.
 
 ## 설치와 실행
 
@@ -57,7 +59,7 @@ npx expo config --type public
 npx expo-doctor
 ```
 
-2026-08-13 기준 결과는 15개 test suite·50개 test, typecheck, lint, Expo dependency check와 Expo Doctor 18/18 통과다.
+2026-08-20 현재 결과는 15개 test suite·54개 test, typecheck와 lint 통과다. `npx expo install --check`와 Expo Doctor는 source 수정과 무관한 SDK 54 patch 권장 차이 3개(`expo` `54.0.36 → ~54.0.37`, `expo-constants` `18.0.13 → ~18.0.14`, `jest-expo` `54.0.17 → ~54.0.18`)만 보고한다. 이 dependency 갱신은 Android history 수정에 섞지 않았다.
 
 ## 주요 경로
 
@@ -82,10 +84,12 @@ npx expo-doctor
 |---|---|
 | Android Expo Go 1~40단계 | 통과 |
 | Android 네트워크·reload 후속 A-1~C-5 | 통과 |
-| 자동 tests·typecheck·lint·Expo checks | 통과 |
+| 자동 tests·typecheck·lint | 15 suites·54 tests, typecheck, lint 통과 |
+| Expo dependency·Doctor | SDK 54 patch 권장 차이 3개 확인, 별도 갱신 대기 |
 | Android development build와 외부 custom scheme | 통과 |
 | iOS EAS Preview Build와 실기기 전체 흐름 | 통과 |
 | Android/iOS WebView 오프라인 오류 화면·retry 후속 회귀 | 통과 |
+| Android app-initiated WebView history·hardware Back 후속 회귀 | 통과 |
 
 Android Expo Go의 상세 환경과 단계별 판정은 [Android Expo Go 검증 완료 보고서](./docs/2026-08-10-android-expo-go-validation-completion.md), development build·custom scheme·Metro-off ANR과 사용자 검증 방법은 [Android development build 검증 완료 문서](./docs/2026-08-11-android-development-build-and-custom-scheme-validation.md)를 기준으로 한다. iOS build·수정·Android 표적 회귀·iPhone 결과는 [iOS EAS Preview Build와 실기기 검증 완료 문서](./docs/2026-08-12-ios-eas-preview-build-and-device-validation.md)를 기준으로 한다.
 

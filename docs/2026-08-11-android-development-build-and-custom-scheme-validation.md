@@ -210,3 +210,15 @@ source/test는 `073c2cad87ccd2b8dc6d91dd604fa631b4829fff`로 문서와 분리했
 사용자가 5단계 결과 검토 뒤 commit/push와 `docs/` 전체 stale 감사를 승인했다. Source·test·tooling 주석은 `c13dbaebad4e4a09a79fa78be1e33819585e0cff`, 본문 문서는 `095d42817ba8df7ce87a722ba4f9ab6bf95720b9`로 분리했고 첫 push 뒤 local·tracking·live remote와 GitHub API의 `master`가 두 번째 SHA로 일치했다.
 
 후속 `Docs: 5단계 GitHub closeout 기록` commit은 최종 상태 문서만 갱신한다. 3단계의 launcher-free development build, custom scheme, Metro-off 실패 분석과 실기기 판정은 그대로 유효하며 이번 5단계에서 build·설치·기기 검증을 반복하지 않았다. 최신 완료·Git parity는 [5단계 최종 인계](./2026-08-13-step-5-final-handoff.md)를 우선한다.
+
+### 8.5 2026-08-20 Android WebView history 후속 회귀
+
+이 문서의 launcher-free development build는 JavaScript bundle을 내장하지 않으므로, 2026-08-20 Android history 수정도 새 APK 없이 기존 설치 앱과 clean Metro의 최신 JavaScript로 검증했다. Package, manifest, scheme, Gradle과 native build input은 바뀌지 않았으며, 기존 custom scheme resolver·cold/warm 진입 판정도 유지된다.
+
+- `mywebviewapp://webviewappdemo?target=1&url=m.nate.com` 진입 뒤 네이버의 native history 위에 네이트가 추가됐고, 첫 hardware Back이 네이버로 돌아가 app process를 유지했다.
+- local bridge의 `다른 탭 이동 및 URL 로드`도 같은 결과를 냈다.
+- Back 뒤 같은 네이트 target 재요청과 현재 네이트 동일 URL reload를 각각 확인해 React `source`와 native current URL이 달라지는 경우까지 회귀했다.
+- history가 없는 네이버에서 첫 Back은 기존 `한 번 더 누르면 앱이 종료됩니다.` Toast를 표시하고 app을 전면에 유지했다.
+- Source/test commit은 `bf591b254c1369879adc094fd0d789f3f87a8ee3`이며, 지정 LG `LM-V500N`, Android 12에서 검증했다. 실기기 serial, log, screenshot과 generated output은 repository에 기록하지 않았다.
+
+현재 자동 검사는 Jest 15 suites·54 tests, typecheck와 lint를 통과했다. Expo dependency 검사는 `expo`, `expo-constants`, `jest-expo`의 SDK 54 patch 기대치와 설치 version 차이만 남아 있으며 이번 동작 수정과 분리한다. 상세 source 계약과 최신 Git 판정은 [5단계 최종 인계](./2026-08-13-step-5-final-handoff.md)를 우선한다.

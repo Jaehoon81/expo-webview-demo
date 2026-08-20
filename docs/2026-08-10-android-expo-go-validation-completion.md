@@ -343,3 +343,26 @@ git log -1 --format=%H -- docs/2026-08-13-step-5-final-handoff.md
 ```
 
 현재 제품 단계와 최종 Git 판정은 [5단계 최종 인계](./2026-08-13-step-5-final-handoff.md)를 우선한다. 1~5단계는 완료됐으며 새 build·실기기 작업은 별도 범위와 승인 없이는 시작하지 않는다.
+
+## 14. 2026-08-20 Android 열린 WebView history 후속 검증
+
+이 문서의 기존 Android back 판정은 WebView 안에 뒤로 갈 문서가 없는 상태에서 첫 Back 안내와 두 번째 Back 종료를 확인한 당시 증거다. 이후 메인 화면의 `WebViewAppDemo 호출하기` 또는 `다른 탭 이동 및 URL 로드`가 네이버 탭을 선택한 뒤 네이트를 열었을 때, Android만 첫 hardware Back에서 네이버로 돌아가지 않고 앱 종료 안내로 내려가는 별도 history 결함을 확인했다.
+
+- 원인은 열린 Android WebView에 app 명령을 전달할 때 page-side `window.location.assign`을 사용한 경로가 이 기기의 기대 native back history를 만들지 못한 데 있었다.
+- Android의 열린 document는 기존 URL policy를 직접 통과한 뒤 같은 `WebView` key의 `source`를 바꿔 RNWV native `loadUrl()`로 이동한다. iOS의 `location.assign`, 최초 source, Web 재선택의 새 key 경로는 유지했다.
+- 같은 URL은 native `reload()`로 처리하고, native Back 뒤 React `source`가 이전 target에 남는 경우에도 다음 같은 target 요청이 prop no-op이 되지 않도록 의미가 같은 GET source 표기를 번갈아 전달한다.
+- Source/test 변경은 `bf591b254c1369879adc094fd0d789f3f87a8ee3` (`Fix: Android WebView 방문 기록 유지`)로 분리해 `master`에 반영했다.
+
+지정 Android 실기기 LG `LM-V500N`, Android 12에서 기존 launcher-free development build가 Metro의 최신 JavaScript를 읽는 방식으로 다음을 확인했다. 새 APK나 native build input은 만들지 않았다.
+
+| 시나리오 | 실제 결과 |
+|---|---|
+| custom scheme → 네이버 탭 → 네이트 | history length `1→2`, 첫 hardware Back이 네이버로 복귀, app process 유지 |
+| local bridge `다른 탭 이동 및 URL 로드` | 동일하게 네이트에서 네이버로 복귀 |
+| Back 뒤 같은 네이트 target 재요청 | 새 네이트 document가 정상 load |
+| 현재 네이트에서 같은 URL 재요청 | history length를 늘리지 않고 실제 reload |
+| history 없는 네이버에서 첫 Back | 기존 종료 안내 Toast와 app 전면 유지 |
+
+자동 검사는 Jest 15 suites·54 tests, typecheck와 lint를 통과했다. `npx expo install --check`와 `npx expo-doctor`는 app 변경과 무관한 Expo SDK 54 patch 기대치 `expo ~54.0.37`, `expo-constants ~18.0.14`, `jest-expo ~54.0.18` 대비 설치 version이 각각 한 patch 낮아 dependency 검사 1개만 실패했다. 이번 history 수정에 package·lockfile·config 갱신을 섞지 않았다.
+
+기존 1~5단계 완료 이력은 그대로 보존한다. 현재 Android history 계약, 문서 감사와 Git closeout은 [5단계 최종 인계](./2026-08-13-step-5-final-handoff.md)의 최신 후속 절을 우선한다.

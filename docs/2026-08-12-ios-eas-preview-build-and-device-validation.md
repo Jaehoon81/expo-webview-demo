@@ -254,3 +254,14 @@ source/test/config는 다음 의미 단위로 분리했다.
 사용자가 5단계 결과 검토 뒤 commit/push와 전체 문서 정합성 감사를 승인했다. Source·test·tooling 주석은 `c13dbaebad4e4a09a79fa78be1e33819585e0cff`, `AGENTS.md`·README·architecture·학습·인계 본문은 `095d42817ba8df7ce87a722ba4f9ab6bf95720b9`로 분리했다. 첫 push 뒤 local·tracking·live remote와 GitHub API의 `master`가 `095d42817ba8df7ce87a722ba4f9ab6bf95720b9`로 일치했다.
 
 마지막 `Docs: 5단계 GitHub closeout 기록` commit은 `docs/`의 과거 snapshot과 최신 우선 관계만 정리한다. EAS build, credential, signing, package/native config, 설치 앱과 iPhone runtime은 변경하거나 다시 검증하지 않았다. 따라서 이 문서의 iOS·Android 실기기 증거와 제외 범위는 그대로 유지되며, 현재 제품·Git 상태는 [5단계 최종 인계](./2026-08-13-step-5-final-handoff.md)를 우선한다.
+
+## 14. 2026-08-20 Android history 수정과 iOS 경계
+
+2026-08-20 후속 수정은 열린 WebView에 app 명령으로 URL을 전달하는 platform branch 중 Android만 바꿨다. 이 문서에서 iOS가 네이버→네이트 뒤 header Back으로 네이버에 돌아간 기존 결과와 `window.location.assign` 방식은 그대로 유지한다.
+
+- Android는 기존 URL policy를 직접 호출한 뒤 같은 key의 `source`를 변경해 RNWV native `loadUrl()` history를 사용한다.
+- iOS는 열린 document의 `location.assign`, header back/forward와 `allowsBackForwardNavigationGestures` 경로를 계속 사용한다.
+- 최초 source, Web tab 재선택의 새 WebView, popup WebView, iOS error-recovery scroll guard와 EAS config에는 변경이 없다.
+- Source/test commit `bf591b254c1369879adc094fd0d789f3f87a8ee3`은 Android 지정 실기기에서 검증했고, Jest 15 suites·54 tests, typecheck와 lint를 통과했다.
+
+이번 후속 범위에서는 새 iOS build·설치·iPhone 재검증을 수행하지 않았다. 따라서 “Android 수정이 iOS에도 실기기에서 다시 통과했다”는 증거로 확대하지 않고, platform guard와 자동 test로 iOS 실행식이 유지됐음을 확인한 정적·component-test 증거로 구분한다. 기존 iPhone 실기기 결과는 이 문서의 당시 build 증거로 유효하며, 현재 Android source 계약과 Git closeout은 [5단계 최종 인계](./2026-08-13-step-5-final-handoff.md)의 최신 후속 절을 우선한다.

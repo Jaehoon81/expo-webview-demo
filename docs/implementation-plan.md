@@ -611,3 +611,52 @@ Source·test·tooling 주석은 `42d2a345cf21b8a7999d01541b046ee8373dd5ec` (`Doc
 | diff | `git diff --check` 통과 |
 
 이번 보강은 현재 source를 문서에 더 충실하게 보여 주는 비동작 변경이다. 따라서 완료된 자동 test·Expo 검사·Android/iOS build·설치·실기기 결과를 새 runtime 증거로 반복하지 않는다. `architecture-internals.md`의 구조 계약과 날짜별 완료 문서의 당시 증거도 달라지지 않아 본문을 수정하지 않았으며, 학습 진입 경로와 최신 문서 상태를 설명하는 README·`learning-guide.md`·이 계획서·최종 인계만 함께 동기화한다.
+
+## 20. 2026-08-20 Android app-initiated WebView history 후속 수정
+
+사용자가 메인의 `WebViewAppDemo 호출하기` 또는 `다른 탭 이동 및 URL 로드`로 Naver tab에 Nate를 연 뒤 Android hardware Back을 누르면 WebView history 대신 app 종료 안내로 진행하는 차이를 발견했다. iOS header Back과 Android/iOS 참고 앱은 Nate에서 Naver로 복귀하므로 Android 구현을 같은 계약으로 맞췄다.
+
+### 20.1 원인과 최소 수정
+
+- 기존 loaded-document `loadUrl`은 Android와 iOS 모두 page-side `window.location.assign`을 사용했다. 현재 Android runtime에서는 app이 만든 target navigation이 `canGoBack` history로 남지 않아 `DemoShell` Back handler가 WebView를 소비하지 못했다.
+- Android는 참고 앱의 `WebView.loadUrl()`과 같은 native 경로를 사용하도록 같은 key의 RNWV `source`를 갱신한다. iOS `location.assign` branch는 그대로 유지한다.
+- Android app-initiated native load는 `onShouldStartLoadWithRequest`를 자동 호출하지 않으므로 source 변경 전에 기존 `onNavigationRequest(url)` policy를 직접 실행한다. 차단이면 source·history·reload를 건드리지 않는다.
+- `onNavigationStateChange`의 실제 URL을 `currentUrlRef`에 저장한다. 현재 URL 재호출은 native `reload()`로 끝내고, 다른 허용 URL은 native source load로 보낸다.
+- native Back 뒤에는 React source가 Nate인데 현재 document는 Naver일 수 있다. method 생략과 명시적 `GET`을 번갈아 같은 GET source를 서로 다른 prop 모양으로 전달해 Back 뒤 같은 Nate 재호출도 native setter에서 생략되지 않게 했다. WebView key와 session은 유지한다.
+- 기존 production/test 주석은 AST comment multiset 기준 전부 보존했고, 추가 코드와 test helper·callback에는 현재 수준의 한국어 역할·이유·검증 경계 주석을 붙였다.
+
+Source와 test는 `bf591b254c1369879adc094fd0d789f3f87a8ee3` (`Fix: Android WebView 방문 기록 유지`)로 분리했다. Push 뒤 local HEAD, `origin/master`, `git ls-remote`와 GitHub API `master`가 모두 이 SHA로 일치했고 ahead/behind `0 0`, worktree clean을 확인했다.
+
+### 20.2 자동 검사와 실기기 증거
+
+| 검사 | 결과 |
+|---|---|
+| WebTab 표적 test | 1 suite·11 tests 통과 |
+| 전체 Jest | 15 suites·54 tests 통과 |
+| TypeScript·ESLint | `npm run typecheck`, `npm run lint` 통과 |
+| 기존 주석 보존 | `WebTab.tsx` 173/173, `WebTab.test.tsx` 55/55 기존 comment 원문 보존 |
+| FLOW inventory | 시작 9개 + 단계 233개 = 242개, 중복·비정상 표식 0 |
+| Expo dependency | `expo`, `expo-constants`, `jest-expo`의 SDK 54 권장 patch 차이 3개로 `expo install --check` 불통과 |
+| Expo Doctor | 17/18; 같은 patch mismatch 1개 검사만 불통과 |
+| 실기기 | LG `LM-V500N`, Android 12(API 31), 기존 launcher-free development build + 현재 Metro bundle |
+
+실기기에서는 clean JavaScript runtime으로 다음을 확인했다.
+
+1. Custom-scheme link: Naver `history.length=1` → Nate `history.length=2` → hardware Back → Naver, app process 유지
+2. Bridge `goToAnotherTab`: Naver → Nate → hardware Back → Naver
+3. Back 뒤 같은 Nate target 재호출: 새 Nate document load, history와 Back 복귀 유지
+4. 현재 Nate에서 같은 target 재호출: `history.length=2` 유지, `performance.timeOrigin` 변경으로 실제 reload 확인
+5. Naver에서 더 이상 뒤로 갈 WebView history가 없는 첫 Back: app process 유지와 Android Toast window 표시
+
+Package·lockfile·app/native config를 바꾸지 않았으므로 patch dependency 갱신과 새 APK build는 이번 최소 수정에 섞지 않았다. 실기기 결과는 기존 development build가 Metro의 현재 JavaScript를 실행한 설치·runtime 증거이며, 새 native artifact를 만들었다는 뜻은 아니다.
+
+### 20.3 문서 동기화 경계
+
+- 현재 계약 문서인 architecture, source commentary와 learning guide에 Android/iOS 분기, 직접 policy 확인, 현재 URL ref, 동일 target 재호출과 실기기 증거를 반영했다.
+- Android Expo Go·development build·iOS Preview 완료 문서의 과거 결과는 삭제하거나 소급 변경하지 않고, 현재 Android 구현이 과거 `location.assign` 설명을 대체한다는 후속 절만 append했다.
+- 2026-08-07 중단 handoff와 2026-08-10 초기 GitHub handoff는 역사적 snapshot이고 이미 최신 최종 인계로 연결되므로 본문 변경 없이 보존했다.
+- README의 현재 test·Expo 검사·Android history 상태를 갱신했다. 학습 완료는 사용자가 아직 명시하지 않았으므로 기록하지 않았다.
+- 승인된 `AGENTS.md` 진단안에 현재 54 tests, 고유 `N-A` FLOW 표식, Android 직접 policy·native source·현재 URL/GET source 계약과 완료된 실기기 검증 경계를 반영했다.
+- `source-commentary-guide.md`는 현재 실제 source 제목·발췌 118쌍, 연결 범위의 시작 표식 9개·단계 참조 138개, 축약 외 source line 2,338개의 원문 순서와 TypeScript/TSX code fence 123개의 parse diagnostic 0을 확인했다.
+- Tracked Markdown 13개에서 local link 373개, source line anchor 126개, heading anchor 2개와 code fence·heading depth·table·trailing whitespace를 검사해 오류 0을 확인했다. Production source·test·package/config와 reference-only `CLAUDE.md`는 이 문서 commit에서 변경하지 않는다.
+- 최종 문서 commit은 자기 SHA를 본문에 고정하지 않고 Git history와 push 뒤 local·tracking·live remote·GitHub API 비교로 확인한다.

@@ -406,3 +406,44 @@ Source FLOW 변경은 `c86825f` (`Docs: FLOW 단계 주석 전면 재구성`), �
 git log -1 --format=%H -- docs/2026-08-13-step-5-final-handoff.md
 git ls-remote --heads origin master
 ```
+
+## 16. 2026-08-20 Android WebView history 후속 수정
+
+15절 뒤 사용자는 app 명령으로 Naver tab에 Nate를 연 경우 iOS와 참고 Android/iOS 앱은 Back으로 Naver에 돌아오지만 현재 Android만 app 종료 안내로 진행하는 차이를 발견했다. 기존 완료 증거를 소급 변경하지 않고 이 절을 현재 Android navigation 계약과 검증의 최신 우선 기록으로 사용한다.
+
+### 16.1 원인과 source 경계
+
+- Loaded document의 공통 `location.assign` 방식이 지정 Android runtime에서 app-initiated Nate navigation을 `canGoBack` history로 남기지 못했다.
+- `WebTab.loadUrl`은 Android에서 parent URL policy를 직접 확인한 뒤 같은 key의 `source` 변경으로 RNWV native `loadUrl()`을 시작한다. iOS `location.assign`은 변경하지 않았다.
+- `onNavigationStateChange` URL로 실제 현재 document를 추적한다. 현재 target이면 reload, 다른 허용 target이면 native source load, 차단 target이면 무동작이다.
+- Native Back 뒤 React source와 현재 URL이 달라지는 경우를 위해 method 생략/명시적 `GET` source를 번갈아 전달한다. 이는 같은 GET request이며 WebView remount·blank 중간 page·이중 request를 만들지 않는다.
+- Production의 기존 173개 comment와 test의 기존 55개 comment는 AST 기준 누락·변경 0이며, 새 코드와 test에도 역할·이유·검증 경계 주석을 추가했다.
+
+Source/test commit은 `bf591b254c1369879adc094fd0d789f3f87a8ee3`이다. Push 뒤 local·tracking·`git ls-remote`·GitHub API의 `master`가 이 SHA로 일치하고 ahead/behind `0 0`, clean worktree를 확인한 뒤 문서 동기화를 시작했다.
+
+### 16.2 검증 결과와 증거 층
+
+| 증거 | 결과 |
+|---|---|
+| Unit/component | Jest 15 suites·54 tests 통과; Android 허용·차단·Back 뒤 같은 target·현재 URL reload branch 포함 |
+| 정적 검사 | typecheck, lint, `git diff --check` 통과; FLOW 시작 9개·단계 233개, 중복 0 |
+| Expo package 검사 | `expo@54.0.36`, `expo-constants@18.0.13`, `jest-expo@54.0.17`에 대한 권장 patch 차이로 install check 불통과, Doctor 17/18 |
+| 설치·실행 | 기존 launcher-free Android development build가 Metro의 현재 bundle을 load |
+| 지정 실기기 | LG `LM-V500N`, Android 12(API 31)에서 아래 history scenario 통과 |
+| 새 native build | 수행하지 않음; package·lockfile·app/native config 변경 없음 |
+
+실기기에서는 custom-scheme link와 bridge button 각각 Naver `history.length=1` → Nate `history.length=2`를 만들었고, hardware Back 뒤 app process를 유지하며 Naver로 복귀했다. Back 후 같은 Nate 재호출도 다시 load됐고, 현재 Nate 재호출은 history 길이를 늘리지 않은 채 새 document time origin으로 reload됐다. Naver에서 history가 없을 때 첫 Back은 기존 계약대로 종료하지 않고 Toast를 표시했다.
+
+### 16.3 전체 문서 재감사
+
+- `docs/`의 Markdown 10개를 모두 inventory하고 Android history, `loadUrl`, `location.assign`, FLOW-03, test 수치와 Expo 검사 판정을 검색했다.
+- 현재 source 계약을 설명하는 architecture·source commentary·learning guide, 구현 계획과 이 최종 인계를 갱신했다.
+- Android Expo Go·development build·iOS Preview 완료 문서는 과거 결과를 보존하면서 이 후속 수정의 대체 관계만 append했다.
+- 2026-08-07 중단 handoff와 2026-08-10 초기 GitHub handoff는 역사적 snapshot과 최신 인계 link가 이미 정확하므로 변경하지 않는다.
+- README는 현재 54 tests, Android history 후속과 Expo patch mismatch를 반영했다.
+- 사용자 승인 뒤 `agents-md-improver` 진단안대로 `AGENTS.md`의 test 수치, 고유 branch FLOW 표식, Android loaded-document URL policy·native history·현재 URL/GET source 계약과 재검증 경계를 갱신했다.
+- `source-commentary-guide.md`는 실제 source 제목·발췌 118쌍, 연결 범위의 시작 표식 9개·단계 참조 138개, 축약 외 source line 2,338개의 원문 순서와 TypeScript/TSX code fence 123개의 parse diagnostic 0을 확인했다.
+- Tracked Markdown 13개에서 local link 373개, source line anchor 126개, heading anchor 2개와 code fence·heading depth·table·trailing whitespace를 검사해 오류 0을 확인했다. Production source·test·package/config와 reference-only `CLAUDE.md`는 이번 문서 묶음에서 변경하지 않는다.
+- 학습 완료는 문서 갱신이나 test 통과로 추정하지 않는다. 사용자가 실제 source 확인과 질문을 마쳤다고 명시할 때만 `learning-guide.md`에 기록한다.
+
+최종 문서 commit과 push는 이 절에 자기 SHA를 넣지 않는다. `git log -1 --format=%H -- docs/2026-08-13-step-5-final-handoff.md`와 local·tracking·live remote·GitHub API 비교를 최신 Git 판정으로 사용한다.

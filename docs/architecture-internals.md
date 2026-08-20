@@ -4,7 +4,7 @@
 
 과거 build·실기기 결과는 날짜별 완료 문서에 보존한다. 이 문서는 과거 이력을 반복하지 않고 현재 source가 어떤 책임과 수명을 갖는지 설명한다.
 
-현재 production source의 runtime 흐름은 `FLOW-01`~`FLOW-09`의 유일한 시작 표식 9개와 고유 단계 229개로 연결된다. 같은 깊이에서 갈라지는 입력·기능·결과는 `N-A`, `N-B` branch로 표시하며, 이전 `[관련 코드]` 표식은 사용하지 않는다.
+현재 production source의 runtime 흐름은 `FLOW-01`~`FLOW-09`의 유일한 시작 표식 9개와 고유 단계 233개로 연결된다. 같은 깊이에서 갈라지는 입력·기능·결과는 `N-A`, `N-B` branch로 표시하며, 이전 `[관련 코드]` 표식은 사용하지 않는다.
 
 ## 1. 저장소 경계와 기준 source
 
@@ -158,6 +158,8 @@ React state는 표시를 다시 계산하고, ref는 최신 명령 상태를 보
 - load progress와 표시할 `loadError`
 - native WebView가 보고한 `canGoBack`·`canGoForward`
 - 첫 document load 완료 여부
+- native navigation callback이 마지막으로 보고한 현재 URL
+- Android source를 기본 GET과 명시적 `GET` 형태로 번갈아 전달할 순서
 - 직전 scroll offset
 - iOS error recovery 중 합성 scroll 차단 여부
 
@@ -168,10 +170,13 @@ React state는 표시를 다시 계산하고, ref는 최신 명령 상태를 보
 | 시점 | 처리 | 이유 |
 |---|---|---|
 | 첫 document `onLoadEnd` 전 | `setSource({ uri: url })` | 아직 JavaScript를 주입할 document가 없음 |
-| 첫 document load 후 | `window.location.assign(url)` 주입 | 기존 WebView instance와 history를 유지 |
+| 첫 document load 후, Android | 기존 URL policy를 직접 호출한 뒤 현재 URL이면 `reload()`, 다른 허용 URL이면 같은 key의 `source` 변경 | app이 시작한 native `loadUrl()`은 policy callback을 자동 호출하지 않으므로 먼저 검사하고 native history에 새 navigation을 남김 |
+| 첫 document load 후, iOS | `window.location.assign(url)` 주입 | 기존 WebView instance와 history를 유지 |
 | 현재 탭 재선택 또는 초기 화면 | `reloadInitial()`로 key 증가 | error/history를 비우고 최초 source의 새 session 생성 |
 
-주입 URL은 `JSON.stringify`로 JavaScript 문자열 literal을 만든다. bridge response도 response JSON을 다시 함수 인자용 JSON 문자열로 직렬화해 quote나 script 문자가 inject expression을 깨지 않게 한다.
+iOS 주입 URL은 `JSON.stringify`로 JavaScript 문자열 literal을 만든다. bridge response도 response JSON을 다시 함수 인자용 JSON 문자열로 직렬화해 quote나 script 문자가 inject expression을 깨지 않게 한다.
+
+Android에서는 React의 마지막 `source`와 native WebView의 현재 URL이 같은 수명이 아니다. 예를 들어 Naver에서 app 명령으로 Nate를 연 뒤 native Back으로 Naver에 돌아오면 React `source`는 여전히 Nate지만 native 현재 URL은 Naver다. 이때 Nate를 다시 요청해도 동일한 source object 내용이면 React Native가 native setter를 다시 실행하지 않을 수 있다. `WebTab`은 `onNavigationStateChange`의 URL을 `currentUrlRef`에 저장하고, 다른 target을 열 때 method 생략과 명시적 `GET`을 번갈아 사용한다. 두 표현은 모두 GET request지만 source prop 모양이 달라져 Back 뒤 같은 target 재호출도 RNWV Android의 `source` setter와 native `loadUrl()`에 다시 도달한다. WebView key는 바꾸지 않으므로 기존 history session은 유지된다.
 
 ### 5.2 navigation decision
 
@@ -190,7 +195,7 @@ React state는 표시를 다시 계산하고, ref는 최신 명령 상태를 보
 
 ### 5.3 native WebView 자동 callback 계약
 
-React가 `key`와 `source`를 commit하면 native WebView가 request를 시작한다. Android 최초 `source` load는 `onShouldStartLoadWithRequest`를 호출하지 않으며, 그 밖의 navigation은 이 callback의 `true`/`false`를 받은 뒤 계속하거나 중단한다.
+React가 `key`와 `source`를 commit하면 native WebView가 request를 시작한다. Android에서 app이 `source`로 시작한 native load는 `onShouldStartLoadWithRequest`를 자동 호출하지 않는다. 최초 상수 source는 이미 앱이 정한 값이고, document load 뒤 `loadUrl`이 만든 source 변경은 `FLOW-03 / 2-D단계`에서 parent policy를 먼저 직접 호출한다. 반면 page link·redirect 같은 WebView navigation은 등록된 callback의 `true`/`false`를 받은 뒤 계속하거나 중단한다.
 
 이 프로젝트의 Expo SDK 54 권장·설치 version인 `react-native-webview` `13.15.0` 문서와 wrapper source에서 확인한 등록 callback 순서는 다음과 같다.
 
@@ -210,6 +215,7 @@ React가 `key`와 `source`를 commit하면 native WebView가 request를 시작�
 - Android hardware back은 `DemoShell`에서 popup → 현재 WebView → app exit 순서로 처리한다.
 - iOS Web tab은 상단 back/forward button을 표시하며 WebView swipe gesture도 허용한다.
 - `canGoBack`·`canGoForward`는 React state가 아니라 ref다. button/back handler가 눌린 순간 최신 native navigation state를 동기적으로 읽고 boolean을 반환하기 위함이다.
+- 2026-08-20 LG `LM-V500N` Android 12 실기기에서 custom-scheme link와 bridge `goToAnotherTab` 두 경로 모두 Naver `history.length=1`에서 Nate `history.length=2`를 만들었고, hardware Back 뒤 app process를 유지하며 Naver로 복귀했다. Back 후 같은 Nate 재호출과 현재 Nate 재호출 reload도 각각 확인했다.
 
 ## 6. popup WebView
 
@@ -460,6 +466,8 @@ bridgeBottomBarVisible && scrollBottomBarVisible && !keyboardVisible
 - Jest preset: `jest-expo`
 - `@/` alias: repository root
 
+2026-08-20 설치 기준은 `expo@54.0.36`, `expo-constants@18.0.13`, `jest-expo@54.0.17`이다. 현재 Expo SDK 54 metadata는 각각 `~54.0.37`, `~18.0.14`, `~54.0.18`을 권장하므로 `npx expo install --check`와 `npx expo-doctor`는 이 세 patch mismatch만 보고한다. Android history 수정은 package·lockfile·native config를 바꾸지 않았으며 dependency 갱신은 별도 범위다.
+
 ### `app.json`
 
 - app name/slug: `my-webview-app`
@@ -477,13 +485,13 @@ package, plugin, app identity, native config를 바꾸면 기존 설치 binary�
 
 ## 16. 자동 test가 고정한 계약
 
-현재 15개 suite·50개 test는 다음 좁은 계약을 고정한다.
+현재 15개 suite·54개 test는 다음 좁은 계약을 고정한다.
 
 - bridge action dispatch와 error envelope
 - URL/deep-link parsing과 system path rewrite
 - user schema와 retry policy
 - Zustand persisted field와 invalid value fallback
-- WebTab mount 유지, loadUrl/reload, error inset와 platform recovery branch
+- WebTab mount 유지, iOS `location.assign`, Android URL policy·native source·Back 뒤 같은 target 재호출·현재 URL reload, error inset와 platform recovery branch
 - NativeUsersScreen activation/refetch와 pull result timing branch
 - BottomTabBar, NetworkStatusBanner, Popup safe-area component contract
 - image size, scroll/back 순수 함수

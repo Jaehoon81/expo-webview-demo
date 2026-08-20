@@ -27,6 +27,8 @@ Expo는 계속 변경된다. source, package, app config 또는 build 설정을 
 - 세 `WebTab`과 `NativeUsersScreen`은 tab 전환만으로 unmount하지 않는다. active prop으로 표시·입력만 전환해 WebView history와 child state를 유지한다.
 - 현재 Web tab 재선택만 `reloadInitial()`, 현재 native tab 재선택만 Query `refetch()`를 실행한다.
 - WebView URL은 `src/services/url-router.ts`의 decision을 거친다. HTTPS 허용, HTTP 차단, app deep link와 OS 외부 URL 경계를 우회하지 않는다.
+- 열린 document에 app 명령으로 URL을 전달할 때 iOS는 `location.assign`, Android는 parent URL policy를 직접 호출한 뒤 같은 key의 `source` 변경으로 native history를 이어 간다. Android app-initiated `source` load에서 생략되는 `onShouldStartLoadWithRequest`를 우회해 policy를 중복 구현하지 않는다.
+- Android `loadUrl`은 `currentUrlRef`로 동일 URL reload와 다른 URL navigation을 구분한다. native Back 뒤 React `source`와 현재 URL이 달라질 수 있으므로 의미가 같은 기본 GET·명시적 `GET` source 표기를 번갈아 RNWV prop update를 보장하는 계약을 유지한다.
 - bridge 입력은 WebView에서 왔으므로 trusted source로 취급하지 않는다. `types → Zod schema → dispatcher → injected dependency → common response` 순서를 유지한다.
 - Zustand persisted state, React state/ref, TanStack Query cache, WebView history와 OS native state의 수명을 하나로 합치지 않는다.
 - network banner는 연결 상태 안내일 뿐 WebView/API request 성공 판정이 아니다. reconnect 뒤 retry/refetch는 현재 명시적 사용자 동작 경계를 유지한다.
@@ -106,12 +108,12 @@ Source code, package, build, manifest, schema, shell script와 동작을 바꾸�
 - `[파일 역할]`
 - `[FLOW-NN]`
 - `[FLOW-NN / N단계]`
-- `[FLOW-NN / 관련 코드]`
+- `[FLOW-NN / N-A단계]`
 - `[이유]`
 - `[주의]`
 - `[검증 경계]`
 
-각 canonical `[FLOW-NN]`과 `[FLOW-NN / N단계]` 조합은 production source 전체에서 한 번만 사용한다. 여러 caller는 `[관련 코드]`로 연결한다.
+각 canonical `[FLOW-NN]` 시작 표식과 `[FLOW-NN / N단계]`·`[FLOW-NN / N-A단계]` 조합은 production source 전체에서 한 번만 사용한다. 여러 caller나 같은 depth의 별도 기능·branch도 각각 고유한 branch 또는 call-site 단계를 부여하며 `[관련 코드]` 표식은 사용하지 않는다.
 
 주석은 보이는 syntax를 반복하지 않고 다음을 설명한다.
 
@@ -128,7 +130,7 @@ JSON config와 lockfile에는 설명 comment를 추가하지 않는다. 관련 �
 
 ## 7. Test와 검증 판정
 
-현재 test는 15 suites·50 tests다. 수치는 source 변경 후 실제 실행 결과로 다시 확인한다.
+현재 test는 15 suites·54 tests다. 수치는 source 변경 후 실제 실행 결과로 다시 확인한다.
 
 - WebView component test는 `react-native-webview` 대역의 props/callback/remount를 확인한다.
 - Native 사용자 화면 test는 Query Hook과 Alert 대역을 사용한다.
@@ -147,7 +149,7 @@ JSON config와 lockfile에는 설명 comment를 추가하지 않는다. 관련 �
 
 Build 성공을 runtime 성공으로, Expo Go 성공을 외부 custom scheme 성공으로, mock test 성공을 사진·알림·WebView native 성공으로 확대하지 않는다.
 
-완료된 Android Expo Go, Android development build, iOS Preview Build와 2026-08-13 network 후속 검증을 이유 없이 반복하지 않는다. source/config 변경 영향이 있는 최소 범위만 새로 정한다.
+완료된 Android Expo Go, Android development build, iOS Preview Build, 2026-08-13 network 후속 검증과 2026-08-20 Android 열린 WebView history 실기기 검증을 이유 없이 반복하지 않는다. source/config 변경 영향이 있는 최소 범위만 새로 정한다.
 
 ## 8. 기기, build와 외부 서비스 경계
 

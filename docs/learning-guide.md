@@ -4,7 +4,7 @@
 
 이 학습서는 React Native의 모든 내용을 다루는 교재가 아니다. 이 앱에서 실제로 사용하는 provider, state, WebView, bridge, 휴대폰 기능, Query가 서로 어떻게 이어지는지 이해하는 데 필요한 내용만 설명한다.
 
-현재 source에는 처음 코드를 보는 사람을 위한 `[역할]`, `[문법]`과 `[라이브러리]` 주석이 있다. 문법이나 API 이름은 정확성을 위해 원문을 유지하지만, 바로 옆에서 그 함수가 실제로 무엇을 하고 왜 필요한지 쉬운 한국어로 설명한다. 큰 기능은 `=` 구분선, 그 안의 작은 단계는 `-` 구분선으로 시작과 끝을 표시한다. FLOW는 `[FLOW-NN]`에서 시작하고, 공통 경로는 `N단계`, 같은 깊이의 입력·기능·결과 branch는 `N-A단계`, `N-B단계`로 나뉘며 각 종료점도 주석에 명시한다. 현재 9개 FLOW의 229개 단계는 production source에서 모두 유일하고 `[관련 코드]` 표식은 사용하지 않는다. 자세한 규칙과 전체 단계 지도는 [소스 주석 읽기 안내서의 주석 표식](./source-commentary-guide.md#1-주석-표식)을 따른다. 각 FLOW를 처음 학습할 때는 [먼저 따라갈 아홉 가지 흐름](./source-commentary-guide.md#2-먼저-따라갈-아홉-가지-흐름)의 `실제 소스로 따라가는 FLOW-NN 핵심 경로`에서 함수·component 전체 모양, 단계별 실제 source와 화살표 설명을 먼저 연결한 뒤 전체 branch 지도로 범위를 넓힌다.
+현재 source에는 처음 코드를 보는 사람을 위한 `[역할]`, `[문법]`과 `[라이브러리]` 주석이 있다. 문법이나 API 이름은 정확성을 위해 원문을 유지하지만, 바로 옆에서 그 함수가 실제로 무엇을 하고 왜 필요한지 쉬운 한국어로 설명한다. 큰 기능은 `=` 구분선, 그 안의 작은 단계는 `-` 구분선으로 시작과 끝을 표시한다. FLOW는 `[FLOW-NN]`에서 시작하고, 공통 경로는 `N단계`, 같은 깊이의 입력·기능·결과 branch는 `N-A단계`, `N-B단계`로 나뉘며 각 종료점도 주석에 명시한다. 현재 9개 FLOW의 233개 단계는 production source에서 모두 유일하고 `[관련 코드]` 표식은 사용하지 않는다. 자세한 규칙과 전체 단계 지도는 [소스 주석 읽기 안내서의 주석 표식](./source-commentary-guide.md#1-주석-표식)을 따른다. 각 FLOW를 처음 학습할 때는 [먼저 따라갈 아홉 가지 흐름](./source-commentary-guide.md#2-먼저-따라갈-아홉-가지-흐름)의 `실제 소스로 따라가는 FLOW-NN 핵심 경로`에서 함수·component 전체 모양, 단계별 실제 source와 화살표 설명을 먼저 연결한 뒤 전체 branch 지도로 범위를 넓힌다.
 
 ## 이 학습서를 대화에서 사용하는 방법
 
@@ -369,12 +369,17 @@ parent는 native `WebView` ref 자체를 알지 못한다. 이 경계 덕분에 
 `loadUrl`의 핵심은 첫 document load 여부다.
 
 ```text
-before onLoadEnd  → source state 변경
-after onLoadEnd   → location.assign 주입
-reloadInitial     → key 변경과 최초 source
+before onLoadEnd         → source state 변경
+after onLoadEnd, Android → parent URL policy 직접 확인
+                         ├─ 현재 URL: native reload
+                         └─ 다른 허용 URL: 같은 key의 source 변경 → native loadUrl
+after onLoadEnd, iOS     → location.assign 주입
+reloadInitial            → key 변경과 최초 source
 ```
 
-첫 load 이후 source prop을 계속 바꾸는 대신 `location.assign`을 쓰므로 native WebView instance와 history chain을 유지한다.
+iOS는 첫 load 뒤 `location.assign`을 사용한다. Android는 참고 앱처럼 native `loadUrl()`로 이어지는 `source` 변경을 사용하되 WebView key를 유지하므로 같은 native instance의 history chain에 새 entry가 쌓인다.
+
+여기서 React `source`와 native 현재 URL을 같은 값으로 생각하면 안 된다. Nate를 source로 연 뒤 hardware Back으로 Naver에 돌아와도 React state의 source는 Nate일 수 있다. `currentUrlRef`는 `onNavigationStateChange`가 알려 준 실제 현재 URL을 기억한다. 현재 URL과 같은 요청은 `reload()`하고, 다른 URL은 method 생략과 명시적 `GET`을 번갈아 같은 GET source를 새 prop 모양으로 전달한다. 따라서 Back 뒤 Nate를 다시 요청해도 React Native가 변경을 생략하지 않고 Android native `loadUrl()`을 다시 실행한다.
 
 ### 4-2. URL policy와 실행 분리
 
@@ -383,6 +388,8 @@ reloadInitial     → key 변경과 최초 source
 이 분리는 같은 policy를 일반 `WebTab`과 `PopupWebView`에서 재사용하게 한다. 실제 실행은 각 component의 context에 따라 달라진다.
 
 예를 들어 `deep-link` decision은 일반 tab에서는 `applyDeepLink`, popup에서는 `onDeepLink`를 호출한 뒤 popup을 닫는 흐름으로 이어진다.
+
+Android의 app-initiated `source` load는 `onShouldStartLoadWithRequest`를 자동 호출하지 않는다. 따라서 document가 열린 뒤 `WebTab.loadUrl`은 source를 바꾸기 전에 `onNavigationRequest(url)`을 직접 호출한다. `false`면 source·history·reload를 건드리지 않고 끝내고, `true`일 때만 현재 URL reload 또는 다른 URL native load branch로 간다. Page link·redirect처럼 WebView가 만든 navigation은 기존 prop callback을 계속 사용한다.
 
 `http:`를 `https:`로 몰래 바꾸지 않는 것도 중요하다. 사용자가 명시한 HTTP target은 차단하고, scheme 없는 `m.nate.com` 같은 bridge/deep-link 입력만 `normalizeHttpsUrl`이 HTTPS로 보완한다.
 
@@ -399,6 +406,13 @@ Android back 우선순위:
 5. 2초 안의 두 번째 back → `BackHandler.exitApp()`
 
 iOS는 hardware back이 없으므로 Web tab 위에 back/forward toolbar를 표시하고 swipe gesture를 허용한다. history가 없는 button은 Alert를 표시한다.
+
+2026-08-20 Android 실기기에서는 두 입력을 따로 확인했다.
+
+1. 메인의 `WebViewAppDemo 호출하기` custom-scheme link → Naver tab의 Nate load
+2. 메인의 `다른 탭 이동 및 URL 로드` bridge button → 같은 Naver tab의 Nate load
+
+두 경우 모두 Naver `history.length=1`에서 Nate `history.length=2`가 됐고 hardware Back은 app을 종료하지 않고 Naver로 돌아왔다. Back 뒤 같은 Nate target 재호출도 새 document를 만들었고, Nate를 보고 있는 상태의 같은 target 재호출은 history 길이를 늘리지 않은 채 `reload()`했다. 반대로 Naver에서 더 이상 뒤로 갈 WebView history가 없을 때 첫 Back은 기존 계약대로 app process를 유지하고 종료 안내 Toast를 표시했다.
 
 [`src/utils/scroll-direction.ts`](../src/utils/scroll-direction.ts)의 `isDoubleBackPress` test는 시간 계산만 확인한다. 실제 app exit와 platform navigation은 JavaScript pure test 범위를 벗어난다.
 
@@ -430,7 +444,7 @@ source tab index를 함께 전달해야 parent decision이 어느 WebView histor
 | 상황 | 자동 호출 주체와 순서 | FLOW-03 |
 |---|---|---|
 | React가 `key`·`source`를 commit | platform WebView가 URL request 시작 | `3` |
-| navigation 허용 판단 | Android 최초 load를 제외하고 native/library가 `onShouldStartLoadWithRequest`; `true`면 계속, `false`면 중단 | `4-A` 또는 `4-B` → `5`~`7` |
+| navigation 허용 판단 | page navigation은 native/library가 `onShouldStartLoadWithRequest`; Android app-initiated source는 callback을 생략하므로 loaded-document `loadUrl`이 parent policy를 직접 호출 | `4-A` 또는 `4-B` → `5`~`7`, Android 명령은 `2-D`~`2-G` |
 | 허용된 load 시작 | `onLoadStart` → `onNavigationStateChange(start)`; 진행 중 `onLoadProgress` 반복 | `8` → `9-A`, 병행 `9-B` |
 | 성공 종료 | `onLoad` → `onLoadEnd` → `onNavigationStateChange(end)` | `10-A` → `11-A` → `12-A` → `13-A` |
 | 일반 load 실패 | `onError` → `onLoadEnd`; 설치 wrapper의 error handler는 이 경로에서 완료 navigation update를 호출하지 않음 | `10-B` → `11-B` → `13-B` |
@@ -457,6 +471,7 @@ Android에서는 이 ref 조건을 적용하지 않는다. Platform test는 조�
 - [`src/components/PopupWebView.tsx`](../src/components/PopupWebView.tsx)
 - [`src/components/DemoShell.tsx`](../src/components/DemoShell.tsx) navigation/back
 - [`src/services/url-router.ts`](../src/services/url-router.ts)
+- [`src/components/WebTab.test.tsx`](../src/components/WebTab.test.tsx)의 Android 허용·차단·Back 뒤 반복 target·현재 URL reload branch
 
 ## 5. WebView bridge와 기기 기능
 

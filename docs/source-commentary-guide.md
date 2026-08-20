@@ -131,7 +131,7 @@ import마다 package 소개를 반복하지 않는다. 같은 library라도 이 
 - `lifecycle`, `runtime`, `dependency`, `caller`, `consumer`, `branch`, `fixture`, `mock` 같은 개발 용어만으로 설명을 끝내지 않는다. 꼭 써야 하면 같은 문장에서 쉬운 뜻과 이 코드의 실제 동작을 붙인다.
 - 한 문장에는 가능하면 한 가지 핵심만 둔다. 문장이 길어지면 “누가 하는가”, “언제 하는가”, “왜 필요한가”로 나눈다.
 - 동일한 JSX 구조, 명백한 style property, 단순 field와 닫는 괄호는 줄마다 반복하지 않는다. 여러 줄이 하나의 계약이면 한 주석으로 묶는다.
-- 현재 production source에는 시작 표식 9개와 고유 단계 표식 229개, 총 238개의 FLOW 표식이 있다. 단계 중복과 `[관련 코드]` 표식은 0개다.
+- 현재 production source에는 시작 표식 9개와 고유 단계 표식 233개, 총 242개의 FLOW 표식이 있다. 단계 중복과 `[관련 코드]` 표식은 0개다.
 - `[FLOW-NN]`, `[FLOW-NN / N단계]`, `[FLOW-NN / N-A단계]`는 production source 전체에서 한 곳에만 둔다. 문법이나 library 설명이 같은 위치에 필요해도 FLOW 표식을 하나 더 만들지 않는다.
 - FLOW 표식이 있는 줄은 그 단계의 caller·입력·출력 또는 종료를 설명하는 독립 문장을 가져야 한다. `[문법]`, `[라이브러리]` 같은 비-FLOW 표식을 같은 줄에 붙여 단계 설명을 대신하지 않는다.
 - 자동 callback에는 React·Expo Router·native WebView·TanStack Query 중 누가 언제 호출하는지 적고, callback이 받은 값과 다음 consumer를 같은 단계에서 연결한다.
@@ -654,7 +654,7 @@ export function DemoShell() {
 
 ↓ **inactive Web 탭도 tree에서 제거되지 않는다. `active` prop은 wrapper의 opacity·pointer·accessibility만 바꿔 document와 history를 보존한다.**
 
-**[FLOW-02 / 5-A단계]** — [`src/components/WebTab.tsx:278-286`](../src/components/WebTab.tsx#L278-L286)
+**[FLOW-02 / 5-A단계]** — [`src/components/WebTab.tsx:315-325`](../src/components/WebTab.tsx#L315-L325)
 
 ```tsx
 export const WebTab = forwardRef<WebTabHandle, WebTabProps>(function WebTab(
@@ -823,8 +823,12 @@ const secureStorage: StateStorage = {
 ```text
 [시작] 1 WebTab state/ref 준비
 ├─ 2-A 첫 document 전 source 교체
-├─ 2-B 열린 document에 location.assign 주입
-└─ 2-C reloadInitial로 새 key
+├─ 2-B iOS 열린 document에 location.assign 주입
+├─ 2-C reloadInitial로 새 key
+├─ 2-D Android 열린 document의 URL policy 직접 호출
+│  ├─ 2-E policy false면 변경 없이 종료
+│  ├─ 2-F 현재 URL과 같으면 native reload로 종료
+│  └─ 2-G 허용된 다른 URL을 같은 key의 native source load로 요청
 → 3 React commit과 native request
 ├─ 4-A onShouldStartLoadWithRequest → 5 parent handler → 6 classifier → 7-A~7-E decision
 └─ 4-B Android 최초 source는 policy callback 생략
@@ -839,17 +843,17 @@ const secureStorage: StateStorage = {
 
 Source 단계 지도:
 
-- [`src/components/WebTab.tsx`](../src/components/WebTab.tsx): 시작, `1`, `2`, `2-A`·`2-B`·`2-C`, `3`, `4-A`·`4-B`, `8`, `9-A`·`9-B`, `10-A`·`10-B`·`10-C`, `11-A`·`11-B`, `12-A`, `13-A`·`13-B`, `14-A`~`14-D`
+- [`src/components/WebTab.tsx`](../src/components/WebTab.tsx): 시작, `1`, `2`, `2-A`~`2-G`, `3`, `4-A`·`4-B`, `8`, `9-A`·`9-B`, `10-A`·`10-B`·`10-C`, `11-A`·`11-B`, `12-A`, `13-A`·`13-B`, `14-A`~`14-D`
 - [`src/components/DemoShell.tsx`](../src/components/DemoShell.tsx): `5`, `7-A`~`7-E`
 - [`src/services/url-router.ts`](../src/services/url-router.ts): `6`
 
-`loadUrl`의 `2-A`·`2-B`와 `reloadInitial`의 `2-C` 차이가 deep link와 bridge 탭 이동 뒤 WebView history 유지 여부를 결정한다. Android 최초 `source`만 `4-A`를 거치지 않는다는 점도 함께 읽는다.
+`loadUrl`의 첫 document `2-A`, iOS 열린 document `2-B`, Android 열린 document `2-D`~`2-G`와 `reloadInitial`의 `2-C` 차이가 deep link와 bridge 탭 이동 뒤 WebView history 유지 여부를 결정한다. Android의 app-initiated `source` load는 최초 load뿐 아니라 열린 document에서 `2-G`가 만든 load도 `4-A`를 자동으로 거치지 않으므로, `2-D`가 같은 parent policy를 먼저 직접 호출한다는 점도 함께 읽는다.
 
 관련 test인 [`src/components/WebTab.test.tsx`](../src/components/WebTab.test.tsx)는 WebView 대역의 mount·props·callback을 확인한다. 실제 page load, cookie, native history와 gesture는 test 범위가 아니다.
 
 #### 실제 소스로 따라가는 FLOW-03 핵심 경로
 
-아래 발췌는 아직 완료된 document가 없는 `WebTab.loadUrl(httpsUrl)` 호출이 `2-A`에서 `source`를 정하고, `onShouldStartLoadWithRequest`가 전달되는 navigation에서 classifier의 `allow`를 받아 성공하는 경로를 따른다. `2-B`의 기존 document `location.assign`, `2-C`의 새 key, Android 최초 source가 policy callback을 생략하는 `4-B`, 차단·deep link·external인 `7-B`~`7-E`, 실패·사용자 recovery인 `10-B`~`14-D`는 위의 기존 단계 지도에서 별도로 확인한다.
+아래 발췌는 iOS에서 아직 완료된 document가 없는 `WebTab.loadUrl(httpsUrl)` 호출이 `2-A`에서 `source`를 정하고, `onShouldStartLoadWithRequest`가 전달되는 navigation에서 classifier의 `allow`를 받아 성공하는 경로를 따른다. Android에서 최초 source가 policy callback을 생략하는 `4-B`, 열린 document의 `2-D`~`2-G`, iOS 기존 document의 `2-B`, 새 key를 만드는 `2-C`, 차단·deep link·external인 `7-B`~`7-E`, 실패·사용자 recovery인 `10-B`~`14-D`는 위의 기존 단계 지도와 뒤의 Android 보강 경로에서 별도로 확인한다.
 
 **[FLOW-03] 시작** — [`src/components/WebTab.tsx:1-2`](../src/components/WebTab.tsx#L1-L2)
 
@@ -871,7 +875,7 @@ export const WebTab = forwardRef<WebTabHandle, WebTabProps>(function WebTab(
 
 ↓ **`WebTab` render는 parent가 준 `initialSource`를 현재 native session의 source로 저장하고, 같은 session의 key·progress·error state를 함께 준비한다.**
 
-**[FLOW-03 / 1단계]** — [`src/components/WebTab.tsx:130-142`](../src/components/WebTab.tsx#L130-L142)
+**[FLOW-03 / 1단계]** — [`src/components/WebTab.tsx:136-148`](../src/components/WebTab.tsx#L136-L148)
 
 ```tsx
 export const WebTab = forwardRef<WebTabHandle, WebTabProps>(function WebTab(
@@ -906,7 +910,7 @@ export const WebTab = forwardRef<WebTabHandle, WebTabProps>(function WebTab(
 
 ↓ **이 핵심 경로에서 parent가 `loadUrl(httpsUrl)`을 부를 때 아직 `onLoadEnd`를 받은 document가 없으므로 JavaScript를 주입하지 않고 `setSource({ uri })`를 선택한다.**
 
-**[FLOW-03 / 2-A단계]** — [`src/components/WebTab.tsx:220-239`](../src/components/WebTab.tsx#L220-L239)
+**[FLOW-03 / 2-A단계]** — [`src/components/WebTab.tsx:275-277`](../src/components/WebTab.tsx#L275-L277)
 
 ```tsx
 export const WebTab = forwardRef<WebTabHandle, WebTabProps>(function WebTab(
@@ -927,6 +931,11 @@ export const WebTab = forwardRef<WebTabHandle, WebTabProps>(function WebTab(
         setLoadError(null);
 
         if (hasLoadedDocumentRef.current) {
+          if (Platform.OS === "android") {
+            // ... Android FLOW-03 2-D~2-G native source 분기 생략 ...
+          }
+
+          // [이유] Android branch는 위에서 모두 반환하므로 기존 `location.assign` 경로는 iOS WebView history 방식을 그대로 유지합니다.
           // [FLOW-03 / 2-B단계] 준비된 document가 있으면 `location.assign(url)`을 주입해 같은 native instance와 history에서 이동합니다.
           // 웹 문서가 이미 열려 있으면 `location.assign`을 실행합니다. 같은 WebView를 쓰므로 기존 뒤로 가기 기록이 남습니다.
           const serializedUrl = JSON.stringify(url);
@@ -951,7 +960,7 @@ export const WebTab = forwardRef<WebTabHandle, WebTabProps>(function WebTab(
 
 ↓ **`setSource`가 React 재render를 요청하면 `WebTab`은 등록할 기능·callback과 현재 `source`·`key`를 하나의 native `WebView` props로 만들고, React commit 뒤 platform request가 시작된다.**
 
-**[FLOW-03 / 2단계 → 3단계]** — [`src/components/WebTab.tsx:293-304`](../src/components/WebTab.tsx#L293-L304)
+**[FLOW-03 / 2단계 → 3단계]** — [`src/components/WebTab.tsx:332-343`](../src/components/WebTab.tsx#L332-L343)
 
 ```tsx
 export const WebTab = forwardRef<WebTabHandle, WebTabProps>(function WebTab(
@@ -992,9 +1001,9 @@ export const WebTab = forwardRef<WebTabHandle, WebTabProps>(function WebTab(
 });
 ```
 
-↓ **Android 최초 source가 아닌 이 navigation에서는 `react-native-webview`가 policy prop을 자동 호출한다. callback은 URL 판단을 직접 하지 않고 parent의 `onNavigationRequest(url)` 반환값을 native에 그대로 돌려준다.**
+↓ **이 iOS source navigation처럼 native policy event가 제공되는 요청에서는 `react-native-webview`가 policy prop을 자동 호출한다. Web document가 직접 시작한 Android navigation도 이 callback을 거치지만, app이 `source` prop으로 시작한 Android `2-A`·`2-G` 요청은 거치지 않으므로 뒤의 `2-D`가 policy를 직접 호출한다. callback 자체는 URL을 판단하지 않고 parent의 `onNavigationRequest(url)` 반환값을 native에 그대로 돌려준다.**
 
-**[FLOW-03 / 4-A단계]** — [`src/components/WebTab.tsx:382-388`](../src/components/WebTab.tsx#L382-L388)
+**[FLOW-03 / 4-A단계]** — [`src/components/WebTab.tsx:423-429`](../src/components/WebTab.tsx#L423-L429)
 
 ```tsx
 export const WebTab = forwardRef<WebTabHandle, WebTabProps>(function WebTab(
@@ -1107,7 +1116,7 @@ export function DemoShell() {
 
 ↓ **native가 load를 시작하면 library가 `onLoadStart`를 한 번 호출하고, 진행 중에는 `onLoadProgress`를 반복 호출해 React progress state를 바꾼다.**
 
-**[FLOW-03 / 8단계·9-B단계]** — [`src/components/WebTab.tsx:331-342`](../src/components/WebTab.tsx#L331-L342)
+**[FLOW-03 / 8단계·9-B단계]** — [`src/components/WebTab.tsx:370-380`](../src/components/WebTab.tsx#L370-L380)
 
 ```tsx
 export const WebTab = forwardRef<WebTabHandle, WebTabProps>(function WebTab(
@@ -1152,7 +1161,7 @@ export const WebTab = forwardRef<WebTabHandle, WebTabProps>(function WebTab(
 
 ↓ **같은 load session의 시작과 완료 시점에 library는 `onNavigationStateChange`도 호출한다. 이 한 prop은 `9-A`에서 시작 history snapshot, `12-A`에서 완료 snapshot을 같은 ref에 덮어쓴다.**
 
-**[FLOW-03 / 9-A단계·12-A단계]** — [`src/components/WebTab.tsx:360-366`](../src/components/WebTab.tsx#L360-L366)
+**[FLOW-03 / 9-A단계·12-A단계]** — [`src/components/WebTab.tsx:399-406`](../src/components/WebTab.tsx#L399-L406)
 
 ```tsx
 export const WebTab = forwardRef<WebTabHandle, WebTabProps>(function WebTab(
@@ -1179,6 +1188,8 @@ export const WebTab = forwardRef<WebTabHandle, WebTabProps>(function WebTab(
         onNavigationStateChange={(navigationState) => {
           // [FLOW-03 / 9-A단계] library는 `onLoadStart` 뒤 같은 시작 navigation 값을 이 prop에 전달해 history ref를 갱신합니다.
           // [FLOW-03 / 12-A단계] 성공 시에는 `onLoad`와 `onLoadEnd` 뒤 완료 navigation 값으로 같은 ref를 한 번 더 갱신합니다.
+          // Android 공개 명령은 이 URL과 다음 target을 비교해 native load와 same-URL reload를 구분합니다.
+          currentUrlRef.current = navigationState.url;
           canGoBackRef.current = navigationState.canGoBack;
           canGoForwardRef.current = navigationState.canGoForward;
         }}
@@ -1192,7 +1203,7 @@ export const WebTab = forwardRef<WebTabHandle, WebTabProps>(function WebTab(
 
 ↓ **성공하면 native library가 `onLoad`로 실제 document 성공을 알린 뒤 `onLoadEnd`를 호출한다. 첫 callback은 iOS recovery 차단을 풀고, 둘째 callback은 document 준비 ref와 progress를 완료한다.**
 
-**[FLOW-03 / 10-A단계 → 11-A단계]** — [`src/components/WebTab.tsx:343-359`](../src/components/WebTab.tsx#L343-L359)
+**[FLOW-03 / 10-A단계 → 11-A단계]** — [`src/components/WebTab.tsx:382-398`](../src/components/WebTab.tsx#L382-L398)
 
 ```tsx
 export const WebTab = forwardRef<WebTabHandle, WebTabProps>(function WebTab(
@@ -1242,7 +1253,7 @@ export const WebTab = forwardRef<WebTabHandle, WebTabProps>(function WebTab(
 
 ↓ **`onLoad`·`onLoadEnd` 뒤 앞서 본 `onNavigationStateChange`가 완료 snapshot으로 한 번 더 실행된다. React render에서 `loadError`가 없으므로 WebView를 숨길 error overlay가 선택되지 않는다.**
 
-**[FLOW-03 / 13-A단계]** — [`src/components/WebTab.tsx:452-456`](../src/components/WebTab.tsx#L452-L456)
+**[FLOW-03 / 13-A단계]** — [`src/components/WebTab.tsx:493-497`](../src/components/WebTab.tsx#L493-L497)
 
 ```tsx
 export const WebTab = forwardRef<WebTabHandle, WebTabProps>(function WebTab(
@@ -1282,7 +1293,261 @@ export const WebTab = forwardRef<WebTabHandle, WebTabProps>(function WebTab(
 });
 ```
 
-↓ **종료:** 성공한 native document는 같은 `WebTab` instance 안에 남고 `hasLoadedDocumentRef=true`, `progress=1`, 최신 back/forward ref를 유지한다. 이후 `loadUrl`은 `2-B`의 `location.assign`을 선택해 이 history에 다음 URL을 이어 붙인다.
+↓ **종료:** 성공한 native document는 같은 `WebTab` instance 안에 남고 `hasLoadedDocumentRef=true`, `progress=1`, 최신 URL·back/forward ref를 유지한다. 이후 `loadUrl`은 iOS에서는 `2-B`의 `location.assign`, Android에서는 `2-D`의 policy 확인 뒤 `2-F`의 same-URL reload 또는 `2-G`의 native source load를 선택한다.
+
+#### 실제 소스로 따라가는 FLOW-03 Android 열린 document 보강 경로
+
+아래 발췌는 Android에서 네이버 document가 이미 열린 뒤 app 명령이 네이트 URL을 요청하고, 같은 `WebView`의 native history에 새 항목을 쌓은 다음 hardware Back으로 네이버에 돌아오는 핵심 경로다. 최초 document의 `2-A`, iOS의 `2-B`, 새 session을 만드는 `2-C`, policy 차단·동일 URL인 `2-E`·`2-F`와 error recovery branch는 위의 단계 지도와 앞선 핵심 경로로 남겨 둔다.
+
+**[FLOW-03 / 2-D단계]** — [`src/components/WebTab.tsx:237-239`](../src/components/WebTab.tsx#L237-L239)
+
+```tsx
+export const WebTab = forwardRef<WebTabHandle, WebTabProps>(function WebTab(
+  {
+    // ... WebTab props 생략 ...
+  },
+  forwardedRef,
+) {
+  // ... state, ref와 helper 생략 ...
+
+  useImperativeHandle(
+    forwardedRef,
+    () => ({
+      // ... reloadInitial 생략 ...
+      loadUrl(url) {
+        // 새 URL로 이동하기 전에 이전 웹 문서의 오류 안내부터 지웁니다.
+        setLoadError(null);
+
+        if (hasLoadedDocumentRef.current) {
+          if (Platform.OS === "android") {
+            // [FLOW-03 / 2-D단계] Android의 app-initiated native load는 policy callback을 자동 호출하지 않으므로 기존 parent URL 판단을 먼저 직접 요청합니다.
+            // [주의] `source` 변경은 native `loadUrl()`로 이어지지만 Android는 그 요청에 `onShouldStartLoadWithRequest`를 다시 호출하지 않습니다.
+            const shouldStartLoad = onNavigationRequest(url);
+
+            // ... FLOW-03 2-E~2-G branch 생략 ...
+          }
+
+          // ... iOS FLOW-03 2-B branch 생략 ...
+        }
+
+        // ... 최초 document FLOW-03 2-A branch 생략 ...
+      },
+      // ... history 명령 생략 ...
+    }),
+    // ... dependency 생략 ...
+  );
+  // ... effect와 JSX return 생략 ...
+});
+```
+
+↓ **Android의 app-initiated `source` load에는 native `onShouldStartLoadWithRequest`가 다시 오지 않으므로 `loadUrl`이 `onNavigationRequest(url)`을 직접 호출한다. 이 prop은 `DemoShell`의 tab별 closure를 거쳐 기존 `5`~`7`단계 classifier와 side effect를 그대로 사용하고, 그 boolean이 `shouldStartLoad`로 돌아온다.**
+
+**[FLOW-03 / 2-E단계·2-F단계]** — [`src/components/WebTab.tsx:240-248`](../src/components/WebTab.tsx#L240-L248)
+
+```tsx
+export const WebTab = forwardRef<WebTabHandle, WebTabProps>(function WebTab(
+  {
+    // ... WebTab props 생략 ...
+  },
+  forwardedRef,
+) {
+  // ... state, ref와 helper 생략 ...
+
+  useImperativeHandle(
+    forwardedRef,
+    () => ({
+      // ... reloadInitial 생략 ...
+      loadUrl(url) {
+        // ... error 초기화와 Android 분기 진입 생략 ...
+
+        const shouldStartLoad = onNavigationRequest(url);
+        if (!shouldStartLoad) {
+          // [FLOW-03 / 2-E단계] 종료(Android 차단): policy가 false이면 source·history·reload 명령을 바꾸지 않고 caller로 돌아갑니다.
+          return;
+        }
+
+        if (currentUrlRef.current === url) {
+          // [FLOW-03 / 2-F단계] 종료(Android 동일 URL): RNWV의 same-URL source no-op 대신 native `reload()`로 현재 문서를 다시 요청합니다.
+          webViewRef.current?.reload();
+          return;
+        }
+
+        // ... 허용된 다른 URL의 FLOW-03 2-G branch 생략 ...
+      },
+      // ... history 명령 생략 ...
+    }),
+    // ... dependency 생략 ...
+  );
+  // ... effect와 JSX return 생략 ...
+});
+```
+
+↓ **policy가 `false`면 `2-E`에서 React state와 native history를 전혀 바꾸지 않는다. `true`이면서 `currentUrlRef`와 target이 같으면 `2-F`가 native `reload()`만 호출한다. 이 경로의 네이버→네이트 요청은 허용된 다른 URL이므로 두 종료 branch를 통과해 `2-G`로 이어진다.**
+
+**[FLOW-03 / 2-G단계]** — [`src/components/WebTab.tsx:251-261`](../src/components/WebTab.tsx#L251-L261)
+
+```tsx
+export const WebTab = forwardRef<WebTabHandle, WebTabProps>(function WebTab(
+  {
+    // ... WebTab props 생략 ...
+  },
+  forwardedRef,
+) {
+  // ... state, ref와 helper 생략 ...
+
+  useImperativeHandle(
+    forwardedRef,
+    () => ({
+      // ... reloadInitial 생략 ...
+      loadUrl(url) {
+        // ... FLOW-03 2-D~2-F 판단 생략 ...
+
+        // [FLOW-03 / 2-G단계] 허용된 다른 URL은 같은 key의 `source`만 바꿔 RNWV Android의 native `loadUrl()`과 history event를 시작합니다.
+        // [이유] page-side `location.assign` 대신 참고 앱과 같은 native load 경로를 사용해야 Android back history가 이전 문서를 가리킵니다.
+        // native Back 뒤에는 현재 URL만 이전 문서가 되고 React의 source는 target에 남습니다. 같은 target을 다시 눌러도 prop update가 생기도록 동등한 GET 표기를 번갈아 씁니다.
+        androidSourceUsesExplicitGetRef.current =
+          !androidSourceUsesExplicitGetRef.current;
+        setSource(
+          androidSourceUsesExplicitGetRef.current
+            ? { uri: url, method: "GET" }
+            : { uri: url },
+        );
+        return;
+      },
+      // ... history 명령 생략 ...
+    }),
+    // ... dependency 생략 ...
+  );
+  // ... effect와 JSX return 생략 ...
+});
+```
+
+↓ **React state의 URI는 네이트로 바뀌지만 `reloadKey`는 그대로다. GET 생략형과 명시형은 같은 request를 뜻하면서도 native Back 뒤 React의 이전 `source`가 네이트에 남아 있을 때 다음 동일 target 요청을 새 prop 변경으로 전달한다. React commit은 아래 `source`를 RNWV Android의 native `loadUrl()`로 보내고 기존 WebView history에 네이트를 추가한다.**
+
+**[FLOW-03 / 2단계 → 3단계 → 8단계 → 9-B단계]** — [`src/components/WebTab.tsx:332-380`](../src/components/WebTab.tsx#L332-L380)
+
+```tsx
+export const WebTab = forwardRef<WebTabHandle, WebTabProps>(function WebTab(
+  {
+    tag,
+    active,
+    // ... 나머지 props 생략 ...
+  },
+  forwardedRef,
+) {
+  // ... state와 callback 생략 ...
+
+  return (
+    // active가 false여도 WebView를 없애지 않습니다. 투명하게 만들고 터치만 막아 웹 문서, 방문 기록, 입력 중인 form 값을 그대로 둡니다.
+    <View
+      /* ... wrapper props 생략 ... */
+    >
+      {/* ... progress UI 생략 ... */}
+
+      {/* [FLOW-03 / 2단계] WebTab render가 아래 기능·callback props를 구성하고 `source`·`key`와 함께 stage 3의 native WebView에 전달합니다.
+          [라이브러리]
+          아래 props는 JavaScript, 웹 저장소, cookie, 새 창처럼 이 WebView에서 사용할 기능을 정합니다.
+          `originWhitelist={["*"]}`는 모든 scheme을 먼저 이 WebView callback으로 보냅니다.
+          실제로 열지는 `onShouldStartLoadWithRequest`가 돌려주는 true 또는 false로 정합니다. */}
+      {/* [FLOW-02 / 10-B단계] React는 증가한 `reloadKey`를 다른 identity로 보고 이전 WebView를 unmount한 뒤 최초 source의 새 instance를 mount합니다. */}
+      {/* [FLOW-03 / 4-B단계] Android 최초 `source` load는 `onShouldStartLoadWithRequest`를 생략하므로 이 앱이 직접 만든 initial source가 바로 native load로 진행합니다. */}
+      {/* [FLOW-03 / 3단계] React가 이 `key`와 `source`를 native WebView에 commit하면 platform이 해당 URL request를 시작합니다. */}
+      <WebView
+        key={reloadKey}
+        ref={webViewRef}
+        source={source}
+        /* ... WebView 기능 props 생략 ... */
+        // [역할] `onLoadStart`는 새 URL을 열기 시작할 때 진행률을 처음 값으로 되돌립니다.
+        onLoadStart={() => {
+          // [FLOW-03 / 8단계] 허용된 load가 시작되면 native event를 받은 library가 이 prop을 자동 호출하고 progress를 0으로 돌립니다.
+          // 새 주소를 열기 시작하면 이전 진행률을 0으로 되돌립니다.
+          setProgress(0);
+        }}
+        // [역할] `onLoadProgress`는 WebView가 알려 준 진행률을 화면 state에 저장합니다.
+        onLoadProgress={(event) => {
+          // [FLOW-03 / 9-B단계] load 중 native progress event마다 이 callback이 반복 호출되어 표시줄 state를 0~1 값으로 갱신합니다.
+          // WebView가 보내는 0부터 1 사이 진행률을 state에 넣어 위 표시줄의 너비를 바꿉니다.
+          setProgress(event.nativeEvent.progress);
+        }}
+        /* ... 뒤의 props 생략 ... */
+      />
+      {/* ... error overlay 생략 ... */}
+    </View>
+  );
+});
+```
+
+↓ **native load가 성공하면 앞선 핵심 경로의 `10-A`·`11-A`를 거치고, RNWV가 `onNavigationStateChange`에 네이트 URL과 `canGoBack=true`를 전달한다. callback은 현재 URL과 history 가능 여부를 ref에 함께 저장한다.**
+
+**[FLOW-03 / 9-A단계·12-A단계]** — [`src/components/WebTab.tsx:399-406`](../src/components/WebTab.tsx#L399-L406)
+
+```tsx
+export const WebTab = forwardRef<WebTabHandle, WebTabProps>(function WebTab(
+  {
+    // ... WebTab props 생략 ...
+  },
+  forwardedRef,
+) {
+  // ... state와 callback 생략 ...
+
+  return (
+    <View /* ... wrapper props 생략 ... */>
+      {/* ... progress UI 생략 ... */}
+      <WebView
+        /* ... 앞선 props 생략 ... */
+        // [역할] `onNavigationStateChange`는 뒤로·앞으로 가기 가능 여부의 최신 값을 저장합니다.
+        onNavigationStateChange={(navigationState) => {
+          // [FLOW-03 / 9-A단계] library는 `onLoadStart` 뒤 같은 시작 navigation 값을 이 prop에 전달해 history ref를 갱신합니다.
+          // [FLOW-03 / 12-A단계] 성공 시에는 `onLoad`와 `onLoadEnd` 뒤 완료 navigation 값으로 같은 ref를 한 번 더 갱신합니다.
+          // Android 공개 명령은 이 URL과 다음 target을 비교해 native load와 same-URL reload를 구분합니다.
+          currentUrlRef.current = navigationState.url;
+          canGoBackRef.current = navigationState.canGoBack;
+          canGoForwardRef.current = navigationState.canGoForward;
+        }}
+        /* ... 뒤의 props 생략 ... */
+      />
+      {/* ... error overlay 생략 ... */}
+    </View>
+  );
+});
+```
+
+↓ **사용자가 hardware Back을 누르면 [`DemoShell.tsx:585-590`](../src/components/DemoShell.tsx#L585-L590)의 Android listener가 현재 tab ref의 `goBack()`을 먼저 호출한다. `canGoBackRef=true`이므로 아래 명령은 native history를 네이트에서 네이버로 한 칸 이동시키고 `true`를 반환하며, caller는 앱 종료 안내로 내려가지 않는다.**
+
+**[FLOW-03 / 14-C단계]** — [`src/components/WebTab.tsx:279-287`](../src/components/WebTab.tsx#L279-L287)
+
+```tsx
+export const WebTab = forwardRef<WebTabHandle, WebTabProps>(function WebTab(
+  {
+    // ... WebTab props 생략 ...
+  },
+  forwardedRef,
+) {
+  // ... state, ref와 helper 생략 ...
+
+  useImperativeHandle(
+    forwardedRef,
+    () => ({
+      // ... reloadInitial과 loadUrl 생략 ...
+      // [역할] `goBack`은 뒤로 갈 기록이 있을 때 WebView를 한 페이지 뒤로 이동시킵니다.
+      goBack() {
+        // [FLOW-03 / 14-C단계] toolbar나 Android back caller가 이 명령을 부르면 최신 ref를 검사해 가능한 경우 native `goBack()`을 실행합니다.
+        // 뒤로 갈 방문 기록이 있을 때만 WebView에 명령을 보냅니다. 없으면 false를 돌려 DemoShell이 앱 종료 같은 다음 처리를 할 수 있게 합니다.
+        if (!canGoBackRef.current) {
+          return false;
+        }
+        webViewRef.current?.goBack();
+        return true;
+      },
+      // ... goForward 생략 ...
+    }),
+    // ... dependency 생략 ...
+  );
+  // ... effect와 JSX return 생략 ...
+});
+```
+
+↓ **종료:** native Back 완료 event가 `onNavigationStateChange`를 다시 호출해 `currentUrlRef=네이버`, `canGoBack=false`로 갱신한다. 2026-08-20 지정 Android 실기기에서는 custom scheme과 local bridge 두 진입 경로 모두 네이버→네이트가 history length `1→2`가 되고 첫 hardware Back이 네이버로 돌아가며 process를 유지했다. Back 뒤 같은 네이트 target 재요청, 현재 네이트 동일 URL reload, history가 없는 첫 Back의 종료 안내도 각각 확인했다. 이는 연결 상태 banner나 iOS path의 판정이 아니라 Android 열린 document native history 경로의 실기기 증거다.
 
 ### FLOW-04: 새 창 분류와 popup lifecycle
 
@@ -1343,7 +1608,7 @@ export const WebTab = forwardRef<WebTabHandle, WebTabProps>(function WebTab(
 
 ↓ **현재 web document가 새 browsing context를 요청하면 native WebView가 이를 감지한다. `react-native-webview`가 `onOpenWindow` prop을 자동 호출하고, event의 `targetUrl`이 parent prop의 인수가 된다.**
 
-**[FLOW-04 / 1단계 → 2단계]** — [`src/components/WebTab.tsx:389-394`](../src/components/WebTab.tsx#L389-L394)
+**[FLOW-04 / 1단계 → 2단계]** — [`src/components/WebTab.tsx:430-435`](../src/components/WebTab.tsx#L430-L435)
 
 ```tsx
 export const WebTab = forwardRef<WebTabHandle, WebTabProps>(function WebTab(
@@ -1982,7 +2247,7 @@ export const LOCAL_DEMO_HTML = `<!doctype html>
 
 ↓ **`request`는 `{ uuid: '', action: 'getDeviceUUID' }`가 되고 `params` field는 생략된다. `postMessage`가 이 객체를 JSON 문자열 하나로 native bridge에 넘기면 `react-native-webview`가 sender WebView의 `onMessage` prop을 자동 호출한다.**
 
-**[FLOW-05 / 3단계 → 4단계]** — [`src/components/WebTab.tsx:372-380`](../src/components/WebTab.tsx#L372-L380)
+**[FLOW-05 / 3단계 → 4단계]** — [`src/components/WebTab.tsx:413-421`](../src/components/WebTab.tsx#L413-L421)
 
 ```tsx
 export const WebTab = forwardRef<WebTabHandle, WebTabProps>(function WebTab(
@@ -2326,7 +2591,7 @@ export function DemoShell() {
 
 ↓ **이제 stage 4에서 이미 등록해 둔 `.then`의 input Promise가 `BridgeResponse`로 fulfilled된다. JavaScript microtask가 response consumer인 `injectBridgeResponse`를 호출하며, 앞의 `void`는 이 내부 chain을 없애거나 취소하지 않는다.**
 
-**[FLOW-05 / 16단계]** — [`src/components/WebTab.tsx:372-380`](../src/components/WebTab.tsx#L372-L380)
+**[FLOW-05 / 16단계]** — [`src/components/WebTab.tsx:413-421`](../src/components/WebTab.tsx#L413-L421)
 
 ```tsx
 export const WebTab = forwardRef<WebTabHandle, WebTabProps>(function WebTab(
@@ -2371,7 +2636,7 @@ export const WebTab = forwardRef<WebTabHandle, WebTabProps>(function WebTab(
 
 ↓ **`.then`이 response를 `injectBridgeResponse` parameter로 넣는다. helper는 객체를 JSON 문자열로 만든 뒤 그 문자열을 JavaScript string literal로 한 번 더 escape하고, sender WebView ref에 `calledByNative(...)` 실행문을 주입한다.**
 
-**[FLOW-05 / 17단계]** — [`src/components/WebTab.tsx:156-168`](../src/components/WebTab.tsx#L156-L168)
+**[FLOW-05 / 17단계]** — [`src/components/WebTab.tsx:164-173`](../src/components/WebTab.tsx#L164-L173)
 
 ```tsx
 export const WebTab = forwardRef<WebTabHandle, WebTabProps>(function WebTab(
@@ -2631,7 +2896,7 @@ export function DemoShell() {
 
 ↓ **여기서 잠시 같은 흐름의 일반 WebView B 입구를 함께 본다. native navigation이 app scheme을 요청하면 `react-native-webview`가 policy prop을 자동 호출하고, URL을 `DemoShell.onNavigationRequest`에 전달해 boolean 반환을 기다린다.**
 
-**[FLOW-06 / 1-B단계 — 일반 WebView 입구]** — [`src/components/WebTab.tsx:382-388`](../src/components/WebTab.tsx#L382-L388)
+**[FLOW-06 / 1-B단계 — 일반 WebView 입구]** — [`src/components/WebTab.tsx:423-429`](../src/components/WebTab.tsx#L423-L429)
 
 ```tsx
 export const WebTab = forwardRef<WebTabHandle, WebTabProps>(function WebTab(
@@ -3296,7 +3561,7 @@ export function DemoShell() {
 
 ↓ **web document가 아래로 움직이면 native WebView가 scroll event를 만들고 `react-native-webview`가 `onScroll` prop을 자동 호출한다. callback은 event의 현재 y offset과 ref에 보관된 직전 offset을 `getScrollDirection`에 전달한 뒤 ref를 최신 값으로 교체한다.**
 
-**[FLOW-08 / 1-A단계]** — [`src/components/WebTab.tsx:400-420`](../src/components/WebTab.tsx#L400-L420)
+**[FLOW-08 / 1-A단계]** — [`src/components/WebTab.tsx:441-460`](../src/components/WebTab.tsx#L441-L460)
 
 ```tsx
 export const WebTab = forwardRef<WebTabHandle, WebTabProps>(function WebTab(
@@ -3381,7 +3646,7 @@ export function getScrollDirection(
 
 ↓ **`"down"`이 중단돼 있던 `onScroll` callback의 `direction`이 된다. 현재 tab이 active이고 iOS error recovery 중이 아니므로 guard를 통과해 parent prop `onScrollDirection("down")`을 호출한다.**
 
-**[FLOW-08 / 3-A단계]** — [`src/components/WebTab.tsx:400-420`](../src/components/WebTab.tsx#L400-L420)
+**[FLOW-08 / 3-A단계]** — [`src/components/WebTab.tsx:441-460`](../src/components/WebTab.tsx#L441-L460)
 
 ```tsx
 export const WebTab = forwardRef<WebTabHandle, WebTabProps>(function WebTab(
@@ -3795,7 +4060,7 @@ export function NetworkStatusBanner({
 
 ↓ **이와 독립적으로 native WebView request가 실패하면 `react-native-webview`가 `onError`를 자동 호출한다. callback은 기본 error UI를 막고 이 WebTab 소유의 `loadError` state를 만든다. banner의 boolean은 이 handler의 입력도, 이 state의 대체값도 아니다.**
 
-**[FLOW-09 / 6-A단계]** — [`src/components/WebTab.tsx:426-437`](../src/components/WebTab.tsx#L426-L437)
+**[FLOW-09 / 6-A단계]** — [`src/components/WebTab.tsx:467-478`](../src/components/WebTab.tsx#L467-L478)
 
 ```tsx
 export const WebTab = forwardRef<WebTabHandle, WebTabProps>(function WebTab(
@@ -3887,7 +4152,7 @@ export function createQueryClient(): QueryClient {
 
 ↓ **대표 WebView 복구는 사용자가 오류 overlay의 `다시 시도`를 누를 때만 시작한다. React Native가 `Pressable.onPress`를 호출하면 callback이 iOS recovery guard를 준비하고 오류 overlay state를 우선 지운 뒤 현재 native WebView의 `reload()` 명령을 실행한다.**
 
-**[FLOW-09 / 8-A단계]** — [`src/components/WebTab.tsx:454-480`](../src/components/WebTab.tsx#L454-L480)
+**[FLOW-09 / 8-A단계]** — [`src/components/WebTab.tsx:493-530`](../src/components/WebTab.tsx#L493-L530)
 
 ```tsx
 export const WebTab = forwardRef<WebTabHandle, WebTabProps>(function WebTab(
@@ -3947,7 +4212,7 @@ export const WebTab = forwardRef<WebTabHandle, WebTabProps>(function WebTab(
 
 ↓ **`reload()`가 새 native request를 시작하면 FLOW-03의 load callbacks가 다시 실행된다. 선택한 성공 경로에서는 `onLoadStart`와 progress event 뒤 `onLoad`가 도착해 실제 document 성공을 확인하고, `onLoadEnd`가 document 준비 ref와 progress를 완료한다. banner가 사라진 시점에는 이 callback들이 실행되지 않았다.**
 
-**[FLOW-09 / 9-A단계]** — [`src/components/WebTab.tsx:331-359`](../src/components/WebTab.tsx#L331-L359)
+**[FLOW-09 / 9-A단계]** — [`src/components/WebTab.tsx:370-398`](../src/components/WebTab.tsx#L370-L398)
 
 ```tsx
 export const WebTab = forwardRef<WebTabHandle, WebTabProps>(function WebTab(
